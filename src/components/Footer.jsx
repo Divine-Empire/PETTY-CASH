@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Plus, TrendingDown, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Plus, TrendingDown, BookOpen, Database } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 
 const Footer = ({ isCollapsed }) => {
@@ -14,7 +14,7 @@ const Footer = ({ isCollapsed }) => {
         { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/add-expense', icon: Plus, label: 'Add Expense' },
         { path: '/expense-list', icon: TrendingDown, label: 'Expenses' },
-        { path: '/ledger', icon: BookOpen, label: 'Ledger' },
+        { path: '/head-master', icon: Database, label: 'Head Master' },
     ];
 
     const employeeMenuItems = [

@@ -623,8 +623,8 @@ export default function PettyCash() {
           </div>
         ) : (
           <>
-            {/* Mobile Cards */}
-            <div className="md:hidden flex flex-col gap-5 p-2 pb-48 bg-white">
+            {/* Mobile Cards - Hidden per user request */}
+            <div className="hidden">
               {displayTransactions.map((t) => (
                 <div key={t.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] flex flex-col gap-5 group relative overflow-hidden active:scale-[0.98] transition-transform">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-100 group-hover:bg-indigo-500 transition-colors"></div>

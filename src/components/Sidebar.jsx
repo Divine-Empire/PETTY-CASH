@@ -105,6 +105,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
             
             {menuItems.map((item, idx) => {
               const isActive = window.location.pathname === item.path;
+              const isLedgerItem = item.label.toLowerCase().includes('petty cash');
               return (
                 <NavLink
                   key={item.path}
@@ -116,6 +117,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                       ? 'bg-indigo-600 text-white shadow-sm' 
                       : 'text-slate-500 hover:bg-slate-50 hover:text-indigo-600'}
                     ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}
+                    ${isLedgerItem ? 'hidden lg:flex' : 'flex'}
                   `}
                 >
                   <div className={`transition-all duration-500 flex-shrink-0 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>

@@ -247,8 +247,8 @@ export default function Ledger() {
       {/* Ledger List Container */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col pt-1 mt-2">
         
-        {/* Mobile View: Cards */}
-        <div className="md:hidden flex flex-col gap-2 p-2 overflow-y-auto h-[calc(100vh-210px)] min-h-[250px] bg-slate-50/50 pb-2">
+        {/* Mobile View: Cards - Hidden per user request */}
+        <div className="hidden">
           {paginatedLedger.map((entry) => (
             <div key={entry.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-2.5 relative flex flex-col gap-1.5 transition-all">
               <div className="flex justify-between items-center bg-gray-50 -mx-2.5 -mt-2.5 px-2.5 py-1.5 border-b border-gray-100 rounded-t-xl mb-0.5">

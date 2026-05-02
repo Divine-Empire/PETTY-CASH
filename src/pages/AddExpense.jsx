@@ -293,9 +293,9 @@ export default function AddExpense() {
        </button>
        <button
         onClick={() => setShowFormModal(true)}
-        className="hidden lg:flex bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-semibold items-center gap-2 transition-all shadow-sm shadow-sm hover:-translate-y-1 active:scale-95"
+        className="flex bg-indigo-600 hover:bg-indigo-700 text-white px-4 lg:px-6 py-3 rounded-2xl font-semibold items-center justify-center gap-2 transition-all shadow-sm hover:-translate-y-1 active:scale-95 text-sm lg:text-base flex-1 lg:flex-none"
        >
-        <Plus size={20} /> Add Expense
+        <Plus size={20} /> <span className="hidden sm:inline">Add Expense</span><span className="sm:hidden">Add</span>
        </button>
      </div>
     </div>
@@ -389,52 +389,71 @@ export default function AddExpense() {
   {/* ---------- Expenses Table (Desktop & Mobile) ---------- */}
   <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col mt-4">
     {/* Mobile Cards */}
-    <div className="md:hidden flex flex-col gap-2 p-2 overflow-y-auto h-[calc(100vh-210px)] min-h-[250px] bg-white pb-2">
+    <div className="md:hidden flex flex-col gap-4 p-4 pb-24 bg-slate-50/50">
      {fetching ? (
-      <div className="text-center py-8 text-gray-400">Loading...</div>
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+       <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent"></div>
+       <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Fetching Records</p>
+      </div>
      ) : paginatedExpenses.map((expense, idx) => (
-      <div key={expense.SN || idx} className="bg-white rounded-xl border border-indigo-50 shadow-sm p-2.5 relative flex flex-col gap-2">
-       <div className="flex justify-between items-center mb-0.5">
-        <div className="flex items-center gap-2">
-         <div className="w-12 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-semibold shadow-sm">
-          {expense.SN ? expense.SN.split('-')[1] || expense.SN : 'N/A'}
+      <div key={expense.SN || idx} className="bg-white rounded-3xl border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] p-5 relative flex flex-col gap-4 active:scale-[0.98] transition-all overflow-hidden group">
+       <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-100 group-hover:bg-indigo-500 transition-colors"></div>
+       
+       <div className="flex justify-between items-start">
+        <div className="flex flex-col gap-1">
+         <div className="flex items-center gap-2 mb-1">
+          <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-bold border border-indigo-100 uppercase tracking-tighter">
+           {expense.SN || 'N/A'}
+          </span>
+          <div className="flex items-center gap-1 text-slate-400">
+           <Calendar size={12} strokeWidth={2.5} />
+           <span className="text-[11px] font-bold">{formatDate(expense.Date)}</span>
+          </div>
          </div>
-         <div>
-          <h3 className="font-medium text-gray-900 text-[13px] ">{expense['Paid To']}</h3>
-          <span className="text-[10px] font-medium text-indigo-500 bg-indigo-50/50 px-1.5 rounded">{expense['Group Head']}</span>
+         <h3 className="font-bold text-slate-900 text-base leading-tight pr-4">{expense['Paid To']}</h3>
+         <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-wide border border-indigo-100/50">{expense['Group Head']}</span>
          </div>
         </div>
-        <div className="flex flex-col items-end gap-0.5">
-         <span className="font-medium text-rose-600 text-[15px]">{formatCurrency(expense['Amount (INR)'])}</span>
-         <div className="bg-sky-50 text-sky-700 px-1.5 rounded text-[8px] font-medium ">{expense['Payment mode']}</div>
+        <div className="flex flex-col items-end gap-1">
+         <span className="font-black text-rose-600 text-xl tracking-tight leading-none">{formatCurrency(expense['Amount (INR)'])}</span>
+         <div className="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-sky-100 uppercase tracking-wider">{expense['Payment mode']}</div>
         </div>
        </div>
        
-       <div className="text-xs text-gray-500 font-medium mb-1 flex justify-between items-center">
-        <span><span className="font-semibold">Exp:</span> {expense['Expense Head']} / {expense['Sub Head']}</span>
-        <span><span className="font-semibold">By:</span> {expense['User'] || expense['user'] || 'N/A'}</span>
+       <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100/60">
+        <div className="flex flex-col gap-1">
+         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Category</span>
+         <p className="text-[11px] font-bold text-slate-700 truncate">{expense['Expense Head']}</p>
+         <p className="text-[10px] font-semibold text-slate-400 truncate">{expense['Sub Head']}</p>
+        </div>
+        <div className="flex flex-col gap-1 border-l border-slate-200 pl-3">
+         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Processed By</span>
+         <p className="text-[11px] font-bold text-slate-700 truncate">{expense['User'] || expense['user'] || 'Admin'}</p>
+         <p className="text-[10px] font-semibold text-slate-400 truncate">{expense.Branch || 'Head Office'}</p>
+        </div>
        </div>
 
-       <div className="bg-slate-50 rounded-lg p-2 border border-slate-100">
-        <div className="flex items-center gap-1 mb-1 border-b border-slate-100/60 pb-1">
-         <Calendar size={11} className="text-indigo-400" />
-         <span className="text-xs font-medium text-slate-700">{formatDate(expense.Date)}</span>
-         <span className="text-[10px] text-indigo-600 font-semibold ml-auto bg-indigo-50 px-2 py-0.5 rounded-md">ID: {expense.SN}</span>
-        </div>
-        <p className="text-[10px] text-indigo-500 font-medium mb-0 ">Remarks</p>
-        <p className="text-slate-700 text-[11px] leading-snug">{expense['Description / Reason'] || '-'}</p>
+       <div className="space-y-1.5">
+        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none ml-1">Purpose / Remarks</span>
+        <p className="text-slate-700 text-xs font-semibold leading-relaxed bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+         {expense['Description / Reason'] || 'No description provided.'}
+        </p>
        </div>
 
        {expense['Bill / Receipt'] && (
         <button onClick={() => openBill(expense['Bill / Receipt'])}
-         className="text-indigo-600 bg-indigo-50/80 hover:bg-indigo-100 py-1.5 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1.5 w-full">
-         <Eye size={12} /> View Bill
+         className="text-white bg-slate-900 hover:bg-slate-800 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 w-full shadow-lg shadow-slate-200 transition-all active:scale-95">
+         <Eye size={16} strokeWidth={2.5} /> View Attached Bill
         </button>
        )}
       </div>
      ))}
      {!fetching && filteredExpenses.length === 0 && (
-      <div className="p-4 text-center text-gray-500 bg-white rounded-xl">No entries found.</div>
+      <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
+       <AlertTriangle className="text-amber-400 mb-3" size={40} strokeWidth={1.5} />
+       <p className="text-slate-500 font-bold text-sm">No expenses found matching filters.</p>
+      </div>
      )}
     </div>
 
@@ -567,60 +586,60 @@ export default function AddExpense() {
 
   {/* Form Modal */}
   {showFormModal && (
-   <div className="fixed inset-0 lg:left-64 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 ">
-    <div className="bg-white rounded-2xl shadow-sm w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden border border-white/20 ">
+   <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-2 md:p-4">
+    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] md:max-h-[90vh] overflow-hidden">
      {/* Modal Header */}
-     <div className="p-8 pb-4 flex justify-between items-center">
-      <div className="flex items-center gap-4">
-       <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-sm shadow-indigo-200">
-        <Plus size={24} />
+     <div className="p-5 md:p-8 pb-3 md:pb-4 flex justify-between items-center border-b border-slate-50">
+      <div className="flex items-center gap-3 md:gap-4">
+       <div className="p-2.5 md:p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-200">
+        <Plus size={20} className="md:w-6 md:h-6" />
        </div>
        <div>
-        <h2 className="text-2xl font-semibold text-gray-900 ">Add Expense</h2>
-        <p className="text-gray-400 text-xs font-semibold ">New Voucher Entry</p>
+        <h2 className="text-xl md:text-2xl font-bold text-slate-900">Add Expense</h2>
+        <p className="text-slate-400 text-[10px] md:text-xs font-semibold uppercase tracking-wider">New Voucher Entry</p>
        </div>
       </div>
-      <button onClick={() => setShowFormModal(false)} className="p-2 hover:bg-slate-100 rounded-xl text-gray-400 transition-colors">
+      <button onClick={() => setShowFormModal(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
        <X size={24} />
       </button>
      </div>
 
      <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-8 pt-2 scrollbar-hide space-y-6">
+      <div className="flex-1 overflow-y-auto p-5 md:p-8 pt-2 scrollbar-hide space-y-4 md:space-y-6">
        {/* Date & Payment Mode */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-         <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Date *</label>
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div className="space-y-1">
+         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Date *</label>
          <input type="date" value={formData.date}
           onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-900" required />
+          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900" required />
         </div>
-        <div>
-         <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Payment Mode *</label>
+        <div className="space-y-1">
+         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Payment Mode *</label>
          <select value={formData.paymentMode}
           onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
-          className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-900 cursor-pointer appearance-none" required>
+          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900 cursor-pointer appearance-none" required>
           {['Cash', 'Cheque', 'Bank Transfer', 'Online'].map((m, i) => <option key={i} value={m}>{m}</option>)}
          </select>
         </div>
        </div>
 
        {/* Group & Expense Head */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-         <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Group Head *</label>
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div className="space-y-1">
+         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Group Head *</label>
          <select value={formData.groupHead}
           onChange={(e) => setFormData({ ...formData, groupHead: e.target.value })}
-          className={`w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold cursor-pointer appearance-none ${!formData.groupHead ? 'text-gray-400' : 'text-gray-900'}`} required>
+          className={`w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold cursor-pointer appearance-none ${!formData.groupHead ? 'text-slate-300' : 'text-slate-900'}`} required>
           <option value="">-- Select Group --</option>
           {groupHeads.map((g, i) => <option key={i} value={g}>{g}</option>)}
          </select>
         </div>
-        <div>
-         <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Expense Head *</label>
+        <div className="space-y-1">
+         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Expense Head *</label>
          <select value={formData.expenseHead}
           onChange={(e) => setFormData({ ...formData, expenseHead: e.target.value })}
-          className={`w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold cursor-pointer appearance-none ${!formData.expenseHead ? 'text-gray-400' : 'text-gray-900'}`} required>
+          className={`w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold cursor-pointer appearance-none ${!formData.expenseHead ? 'text-slate-300' : 'text-slate-900'}`} required>
           <option value="">-- Select Expense Head --</option>
           {expenseHeads.map((h, i) => <option key={i} value={h}>{h}</option>)}
          </select>
@@ -628,54 +647,57 @@ export default function AddExpense() {
        </div>
 
        {/* Sub Head & Amount */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-         <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Sub Head *</label>
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div className="space-y-1">
+         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Sub Head *</label>
          <select value={formData.subHead}
           onChange={(e) => setFormData({ ...formData, subHead: e.target.value })}
-          className={`w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold cursor-pointer appearance-none ${!formData.subHead ? 'text-gray-400' : 'text-gray-900'}`} required>
+          className={`w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold cursor-pointer appearance-none ${!formData.subHead ? 'text-slate-300' : 'text-slate-900'}`} required>
           <option value="">-- Select Sub Head --</option>
           {subHeads.map((s, i) => <option key={i} value={s}>{s}</option>)}
          </select>
         </div>
-        <div>
-         <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Amount (INR) *</label>
-         <input type="number" step="0.01" min="0" value={formData.amount}
-          onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-          placeholder="0.00"
-          className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-900" required />
+        <div className="space-y-1">
+         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Amount (INR) *</label>
+         <div className="relative">
+          <span className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+          <input type="number" step="0.01" min="0" value={formData.amount}
+           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+           placeholder="0.00"
+           className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-8 md:pl-10 pr-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900" required />
+         </div>
         </div>
        </div>
 
        {/* Paid To & Branch */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-         <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Paid To *</label>
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <div className="space-y-1">
+         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Paid To *</label>
          <input type="text" value={formData.paidTo}
           onChange={(e) => setFormData({ ...formData, paidTo: e.target.value })}
           placeholder="Vendor / Person name"
-          className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-900" required />
+          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900" required />
         </div>
-        <div>
-         <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Branch</label>
+        <div className="space-y-1">
+         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Branch</label>
          <input type="text" value={formData.branch}
           onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-          className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-900" />
+          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900" />
         </div>
        </div>
 
        {/* Description */}
-       <div>
-        <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Description / Reason *</label>
+       <div className="space-y-1">
+        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Description / Reason *</label>
         <textarea value={formData.description}
          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
          placeholder="Brief reason for the expense..."
          rows="3"
-         className="w-full bg-slate-50 border-none rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-900 resize-none" required />
+         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900 resize-none" required />
        </div>
 
-       <div className="space-y-4">
-        <label className="text-xs font-semibold text-slate-900  ml-1 mb-1 block">Upload Bill / Receipt</label>
+       <div className="space-y-3">
+        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Upload Bill / Receipt</label>
         <div className="relative group">
          <input
           type="file"
@@ -721,11 +743,13 @@ export default function AddExpense() {
             setIsUploading(false);
            }
           }}
-          className="w-full bg-slate-50 border-2 border-dashed border-slate-100 rounded-2xl px-5 py-8 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-semibold text-gray-500 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file: file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+          className="w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl px-5 py-10 md:py-12 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-400 text-xs md:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] md:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-indigo-600 cursor-pointer"
          />
          {formData.billUrl && (
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 animate-in zoom-in duration-300">
-           <Check size={24} />
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 text-emerald-500 animate-in zoom-in duration-300">
+           <div className="p-2 bg-emerald-50 rounded-full border border-emerald-100">
+            <Check size={20} strokeWidth={3} />
+           </div>
           </div>
          )}
         </div>
@@ -733,19 +757,18 @@ export default function AddExpense() {
       </div>
 
       {/* Modal Footer */}
-      <div className="p-8 border-t border-slate-50 bg-white flex gap-4">
+      <div className="p-5 md:p-8 border-t border-slate-50 bg-slate-50/30 flex gap-3 md:gap-4">
        <button
         type="submit"
-        onClick={handleSubmit}
         disabled={submitting || isUploading}
-        className="flex-1 flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-semibold shadow-sm shadow-sm transition-all active:scale-95 disabled:opacity-50"
+        className="flex-1 flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 md:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 disabled:shadow-none"
        >
         {submitting ? 'Processing...' : isUploading ? 'Uploading...' : 'Submit Expense'}
        </button>
        <button
         type="button"
         onClick={() => setShowFormModal(false)}
-        className="px-8 py-4 bg-white border border-slate-100 rounded-2xl font-semibold text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
+        className="px-6 md:px-8 py-3.5 md:py-4 bg-white border border-slate-200 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
        >
         Abort
        </button>
@@ -754,6 +777,13 @@ export default function AddExpense() {
     </div>
    </div>
   )}
+  {/* Floating Action Button for Mobile */}
+  <button
+   onClick={() => setShowFormModal(true)}
+   className="lg:hidden fixed bottom-6 right-6 p-4 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-200 z-50 active:scale-90 transition-transform"
+  >
+   <Plus size={28} strokeWidth={3} />
+  </button>
  </>
  );
 }
