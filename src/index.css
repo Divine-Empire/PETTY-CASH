@@ -92,19 +92,94 @@ table th, table td {
   padding: 0.75rem 1rem;
 }
 
-/* Redefining some tailwind utility defaults if needed directly */
-.space-y-6 > * + * {
-  margin-top: 1rem !important;
-}
+/* Print Styles */
+@media print {
+  .no-print,
+  nav,
+  aside,
+  header,
+  footer,
+  .sidebar,
+  button,
+  .filter-bar,
+  .form-container,
+  .no-print-icon,
+  [role="navigation"] {
+    display: none !important;
+  }
 
-.space-y-4 > * + * {
-  margin-top: 0.75rem !important;
-}
+  body {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
 
-.gap-4 {
-  gap: 0.75rem !important;
-}
+  .print-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10mm !important; /* Standard print padding */
+  }
 
-.p-4 {
-  padding: 1rem;
+  .print-title {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    font-size: 24pt;
+    font-weight: 800;
+    margin-bottom: 30px;
+    text-align: center;
+    color: #0f172a;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 15px;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: auto !important;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 12px 8px !important;
+    font-size: 9pt !important;
+    line-height: 1.4 !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    -webkit-print-color-adjust: exact;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .shadow-sm, .shadow-md, .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  .rounded-xl, .rounded-2xl {
+    border-radius: 0 !important;
+    border-width: 1px !important;
+  }
+
+  /* Force color for backgrounds and text */
+  .bg-slate-800, .bg-slate-900, [class*="bg-slate-"] {
+    background-color: transparent !important;
+    color: black !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .text-white, [class*="text-white"] {
+    color: black !important;
+  }
+
+  /* Specific footer navigation hiding */
+  [class*="fixed bottom-0"], footer, .footer {
+    display: none !important;
+  }
 }
