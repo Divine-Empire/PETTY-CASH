@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import toast from 'react-hot-toast';
 import {
   Plus, Trash2, Edit2, X, Check, RefreshCcw,
-  Layers, Box, Subtitles, Search, Loader2, FilterX
+  Layers, Box, Subtitles, Search, Loader2, FilterX, User
 } from 'lucide-react';
 
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;

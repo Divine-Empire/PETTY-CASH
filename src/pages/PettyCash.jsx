@@ -436,7 +436,8 @@ export default function PettyCash() {
             <h2 className="text-base md:text-2xl lg:text-3xl font-black text-amber-600 tracking-tight">{formatCurrency(cashReturned).replace('INR', '₹')}</h2>
           </div>
         </div>
-          {/* Form Container */}
+      </div>
+      {/* Form Container */}
       {showForm && createPortal(
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-in fade-in duration-300">
           <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-slate-100">
@@ -899,6 +900,4 @@ export default function PettyCash() {
       )}
     </div>
   );
-};
-
-export default PettyCash;
+}
