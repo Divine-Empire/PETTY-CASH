@@ -82,8 +82,11 @@ export default function Settings() {
 
     if (authRole === 'SUPER_ADMIN') return matchesSearch;
     
-    // ADMIN only sees and manages standard USERs who report to them
-    return matchesSearch && u.role === 'USER' && u.reportedBy === authId;
+    // ADMIN only sees and manages standard USERs who report to them, plus their own record
+    return matchesSearch && (
+      (u.role === 'USER' && u.reportedBy === authId) || 
+      u.id === authId
+    );
   });
 
   const handleSaveUser = async () => {
