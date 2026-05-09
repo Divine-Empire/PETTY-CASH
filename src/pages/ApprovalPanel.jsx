@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import {
-  Check, X, Pause, Trash2, RotateCcw, ShieldCheck, ShieldAlert, AlertTriangle, RefreshCcw, User, Building2, Paperclip, FileText, Image as ImageIcon
+  Check, X, Pause, Trash2, RotateCcw, ShieldCheck, ShieldAlert, AlertTriangle, RefreshCcw, User, Building2, Paperclip, FileText, Image as ImageIcon, Lock
 } from 'lucide-react';
 import { formatCurrency, formatDate, getGoogleSheetTimestamp } from '../utils/helpers';
+import { useAuthStore } from '../store/authStore';
 
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
 
@@ -20,6 +21,10 @@ const DELETE_TABS = [
 ];
 
 export default function ApprovalPanel() {
+  const { user } = useAuthStore();
+  const role      = user?.role?.toUpperCase();
+  const userId    = user?.id || '';
+
   const [mainTab,    setMainTab]    = useState('expense');   
   const [expenseTab, setExpenseTab] = useState('pending');
   const [deleteTab,  setDeleteTab]  = useState('delete-pending');
@@ -30,6 +35,24 @@ export default function ApprovalPanel() {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [actionType, setActionType]   = useState('');
   const [remark,    setRemark]    = useState('');
+
+  // ---------- RBAC: scope records by role ----------
+  const scopedRecords = useMemo(() => {
+    if (role === 'SUPER_ADMIN') return records;                         // sees all
+    if (role === 'ADMIN') {
+      // Admin sees records of users who report to them
+      return records.filter(r => r['Reported by'] === userId);
+    }
+    return [];
+  }, [records, role, userId]);
+
+  // Helper: can this approver action this record?
+  // Admins cannot approve their own submissions; only SUPER_ADMIN can
+  const canApprove = (record) => {
+    if (role === 'SUPER_ADMIN') return true;
+    if (role === 'ADMIN') return record['user'] !== userId;
+    return false;
+  };
 
   const fetchRecords = async () => {
     try {
@@ -44,18 +67,18 @@ export default function ApprovalPanel() {
   useEffect(() => { fetchRecords(); }, []);
 
   const expenseCounts = {
-    pending:  records.filter(r => r.Status === 'PENDING' && r['Delete Status'] !== 'DELETED' && r.Flow !== 'IN').length,
-    hold:     records.filter(r => r.Status === 'HOLD' && r['Delete Status'] !== 'DELETED' && r.Flow !== 'IN').length,
-    rejected: records.filter(r => r.Status === 'REJECTED' && r['Delete Status'] !== 'DELETED' && r.Flow !== 'IN').length,
-    history:  records.filter(r => r.Status === 'APPROVED' && r['Delete Status'] !== 'DELETED' && r.Flow !== 'IN').length,
+    pending:  scopedRecords.filter(r => r.Status === 'PENDING' && r['Delete Status'] !== 'DELETED' && r.Flow !== 'IN').length,
+    hold:     scopedRecords.filter(r => r.Status === 'HOLD' && r['Delete Status'] !== 'DELETED' && r.Flow !== 'IN').length,
+    rejected: scopedRecords.filter(r => r.Status === 'REJECTED' && r['Delete Status'] !== 'DELETED' && r.Flow !== 'IN').length,
+    history:  scopedRecords.filter(r => r.Status === 'APPROVED' && r['Delete Status'] !== 'DELETED' && r.Flow !== 'IN').length,
   };
 
   const deleteCounts = {
-    'delete-pending': records.filter(r => r['Delete Status'] === 'PENDING_DELETE').length,
-    'deleted':        records.filter(r => r['Delete Status'] === 'DELETED').length,
+    'delete-pending': scopedRecords.filter(r => r['Delete Status'] === 'PENDING_DELETE').length,
+    'deleted':        scopedRecords.filter(r => r['Delete Status'] === 'DELETED').length,
   };
 
-  const filteredRecords = records.filter(r => {
+  const filteredRecords = scopedRecords.filter(r => {
     if (mainTab === 'expense') {
       if (r['Delete Status'] === 'DELETED') return false;
       if (r.Flow === 'IN') return false; 
@@ -213,11 +236,17 @@ export default function ApprovalPanel() {
                           {isHistory ? (
                             <span className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase ${r.Status==='APPROVED'?'bg-emerald-50 border-emerald-100 text-emerald-600':'bg-rose-50 border-rose-100 text-rose-600'}`}>{r.Status}</span>
                           ) : mainTab === 'expense' ? (
-                            <>
-                              <button onClick={() => handleAction(r, 'APPROVED')} className="p-1.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all"><Check size={14} /></button>
-                              <button onClick={() => openModal(r, 'REJECT')} className="p-1.5 bg-rose-50 text-rose-600 rounded border border-rose-100 hover:bg-rose-600 hover:text-white transition-all"><X size={14} /></button>
-                              <button onClick={() => openModal(r, 'HOLD')} className="p-1.5 bg-amber-50 text-amber-600 rounded border border-amber-100 hover:bg-amber-600 hover:text-white transition-all"><Pause size={14} /></button>
-                            </>
+                            canApprove(r) ? (
+                              <>
+                                <button onClick={() => handleAction(r, 'APPROVED')} className="p-1.5 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all" title="Approve"><Check size={14} /></button>
+                                <button onClick={() => openModal(r, 'REJECT')} className="p-1.5 bg-rose-50 text-rose-600 rounded border border-rose-100 hover:bg-rose-600 hover:text-white transition-all" title="Reject"><X size={14} /></button>
+                                <button onClick={() => openModal(r, 'HOLD')} className="p-1.5 bg-amber-50 text-amber-600 rounded border border-amber-100 hover:bg-amber-600 hover:text-white transition-all" title="Hold"><Pause size={14} /></button>
+                              </>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[9px] font-bold text-slate-400 uppercase px-2 py-1 bg-slate-50 border border-slate-200 rounded" title="Only Super Admin can approve your own expenses">
+                                <Lock size={10} /> Super Admin Only
+                              </span>
+                            )
                           ) : (
                             <>
                               <button onClick={() => openModal(r, 'DELETED')} className="p-1.5 bg-rose-50 text-rose-600 rounded border border-rose-100 hover:bg-rose-600 hover:text-white transition-all" title="Approve Delete"><Trash2 size={14} /></button>

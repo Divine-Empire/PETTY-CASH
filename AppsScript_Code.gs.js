@@ -13,6 +13,20 @@ const PETTY_CASH_SHEET = 'PettyCash';
 const BILL_FOLDER_ID = '117ZrN-VJ93qyYQpH649bVGdVi89at62e';
 const SPREADSHEET_ID = '1zObgd-x7nlclhtFhWjBoeoHhaNYA-pShwikVWkFlPuY';
 
+// Auto-initialize Add_Expense headers if needed
+function initAddExpenseHeaders() {
+  var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+  if (sheet.getLastColumn() === 0) {
+    sheet.appendRow(['Timestamp', 'SN', 'Date', 'Payment mode', 'Group Head', 'Expense Head', 'Sub Head', 'Amount (INR)', 'Paid To', 'Branch', 'Description / Reason', 'user', 'Bill / Receipt', 'Approval Timestamp', 'Status', 'Approval / Reject - Remark', 'Delete Status', 'Flow', 'Reported by']);
+    sheet.getRange(1, 1, 1, 19).setFontWeight('bold').setBackground('#f1f5f9');
+  } else {
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (headers.indexOf('Reported by') === -1) {
+      sheet.getRange(1, headers.length + 1).setValue('Reported by').setFontWeight('bold').setBackground('#f1f5f9');
+    }
+  }
+}
+
 // ==================== ENTRY POINTS ====================
 
 function doGet() {
@@ -25,6 +39,7 @@ function doPost(e) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
+    initAddExpenseHeaders();
 
     if (!e || !e.postData || !e.postData.contents) {
       throw new Error('No POST data received.');
@@ -75,6 +90,9 @@ function doPost(e) {
         break;
       case 'delete':
         result = handleDelete(getSheet(), request);
+        break;
+      case 'batchcreate':
+        result = handleBatchCreate(getSheet(), request.data);
         break;
 
       // ---- File Upload ----
@@ -451,14 +469,22 @@ function handleDeletePettyCash(timestamp) {
 
 function handleMasterRequests(payload) {
   var sheetName = 'Master';
-  var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-
-  var sheet = spreadsheet.getSheetByName(sheetName);
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
-    sheet = spreadsheet.insertSheet(sheetName);
-    sheet.appendRow(['Group Head', 'Expense Head', 'Sub Head', 'Vendor']);
-    sheet.getRange('A1:D1').setFontWeight('bold');
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(['Group Head', 'Expense Head', 'Sub Head', 'Vendore', 'Branch']);
+    sheet.getRange('A1:E1').setFontWeight('bold');
     sheet.setFrozenRows(1);
+  } else {
+    // Ensure Vendore & Branch headers exist
+    var headers = sheet.getRange(1, 1, 1, 5).getValues()[0];
+    if (headers[3] !== 'Vendore') {
+      sheet.getRange(1, 4).setValue('Vendore').setFontWeight('bold');
+    }
+    if (headers[4] !== 'Branch') {
+      sheet.getRange(1, 5).setValue('Branch').setFontWeight('bold');
+    }
   }
 
   var action = payload.action;
@@ -486,15 +512,16 @@ function handleMasterRequests(payload) {
       var groupHead = data['Group Head'] || '';
       var expenseHead = data['Expense Head'] || '';
       var subHead = data['Sub Head'] || '';
-      var vendor = data['Vendor'] || '';
+      var vendor = data['Vendore'] || '';
+      var branch = data['Branch'] || '';
 
       var values = sheet.getDataRange().getValues();
       var isDuplicate = values.slice(1).some(function(row) {
-        return row[0] === groupHead && row[1] === expenseHead && row[2] === subHead && row[3] === vendor;
+        return row[0] === groupHead && row[1] === expenseHead && row[2] === subHead && row[3] === vendor && row[4] === branch;
       });
 
       if (!isDuplicate) {
-        sheet.appendRow([groupHead, expenseHead, subHead, vendor]);
+        sheet.appendRow([groupHead, expenseHead, subHead, vendor, branch]);
       }
       return { success: true, message: 'Added successfully' };
     }
@@ -530,10 +557,20 @@ function handleMasterRequests(payload) {
           row[2] === (oldValue['Sub Head'] || '')) {
           row[2] = newValue['Sub Head'] || row[2];
           shouldUpdate = true;
+        } else if (level === 'vendor' &&
+          row[0] === (oldValue['Group Head'] || '') &&
+          row[1] === (oldValue['Expense Head'] || '') &&
+          row[3] === (oldValue['Vendore'] || '')) {
+          row[3] = newValue['Vendore'] || row[3];
+          shouldUpdate = true;
+        } else if (level === 'branch' &&
+          row[4] === (oldValue['Branch'] || '')) {
+          row[4] = newValue['Branch'] || row[4];
+          shouldUpdate = true;
         }
 
         if (shouldUpdate) {
-          sheet.getRange(i + 1, 1, 1, 4).setValues([row]);
+          sheet.getRange(i + 1, 1, 1, 5).setValues([row]);
           updatedCount++;
         }
       }
@@ -558,10 +595,13 @@ function handleMasterRequests(payload) {
           if (row[0] === targetGroup) shouldDelete = true;
         } else if (targetGroup && targetExpense !== undefined && targetSub === undefined) {
           if (row[0] === targetGroup && row[1] === targetExpense) shouldDelete = true;
-        } else if (targetGroup && targetExpense !== undefined && targetSub !== undefined) {
+        } else if (targetGroup && targetExpense !== undefined && targetSub !== undefined && data['Vendor'] === undefined) {
           if (row[0] === targetGroup && row[1] === targetExpense && row[2] === targetSub) shouldDelete = true;
+        } else if (targetGroup && targetExpense !== undefined && data['Vendore'] !== undefined) {
+          if (row[0] === targetGroup && row[1] === targetExpense && row[3] === data['Vendore']) shouldDelete = true;
+        } else if (data['Branch'] !== undefined) {
+          if (row[4] === data['Branch']) shouldDelete = true;
         }
-
         if (shouldDelete) {
           sheet.deleteRow(i + 1);
           deletedCount++;
@@ -587,12 +627,11 @@ function handleMasterRequests(payload) {
 function handleSettingRequests(payload) {
   var sheetName = 'setting';
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(['user', 'user name', 'password', 'role', 'branch', 'department', 'Page access']);
-    sheet.getRange('A1:G1').setFontWeight('bold').setBackground('#f1f5f9');
+    sheet.appendRow(['user', 'user name', 'password', 'role', 'branch', 'department', 'Page access', 'Reported by']);
+    sheet.getRange('A1:H1').setFontWeight('bold').setBackground('#f1f5f9');
     sheet.setFrozenRows(1);
   }
 
@@ -658,7 +697,8 @@ function handleSettingRequests(payload) {
             newValue['role'] || values[i][3],
             newValue['branch'] || values[i][4],
             newValue['department'] || values[i][5],
-            newValue['Page access'] !== undefined ? newValue['Page access'] : values[i][6]
+            newValue['Page access'] !== undefined ? newValue['Page access'] : values[i][6],
+            newValue['Reported by'] !== undefined ? newValue['Reported by'] : values[i][7]
           ]]);
           updated = true;
           break;
@@ -731,4 +771,15 @@ function testReadPettyCash() {
     Logger.log('First row: ' + JSON.stringify(result[0], null, 2));
   }
   Logger.log('Read test completed.');
+}
+function handleBatchCreate(sheet, dataArray) {
+  if (!dataArray || !Array.isArray(dataArray)) throw new Error('Invalid data for batch create');
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var rowsToAdd = dataArray.map(function(item) {
+    return headers.map(function(h) {
+      return item[h] !== undefined ? item[h] : '';
+    });
+  });
+  sheet.getRange(sheet.getLastRow() + 1, 1, rowsToAdd.length, headers.length).setValues(rowsToAdd);
+  return { success: true, count: rowsToAdd.length };
 }

@@ -9,7 +9,6 @@ import { formatDate, formatCurrency, getTodayDate, getGoogleSheetTimestamp, file
 
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
 
-const branches = ['Head Office','Mumbai','Delhi','Bangalore','Chennai'];
 
 // Drive Folder IDs
 const EXPENSE_FOLDER_ID = '1bBqruNp7BSsGL217YrJexi49K9gUAYK2';
@@ -25,7 +24,6 @@ export default function AddExpense() {
   const [submitting, setSubmitting] = useState(false);
   const [masterData, setMasterData] = useState([]); 
   const [activeType, setActiveType] = useState('EXPENSE'); 
-  const [drafts, setDrafts] = useState([]);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [processingStatus, setProcessingStatus] = useState('');
 
@@ -38,7 +36,7 @@ export default function AddExpense() {
     subHead: '',
     amount: '',
     paidTo: '',
-    branch: 'Head Office',
+    branch: '',
     description: ''
   });
 
@@ -47,8 +45,7 @@ export default function AddExpense() {
     transactionType: 'Cash Received (+)',
     amount: '',
     receivedFrom: '',
-    branch: 'Head Office',
-    descriptionMemo: ''
+    branch: '',
   });
 
   const [showFormModal, setShowFormModal] = useState(false);
@@ -86,7 +83,11 @@ export default function AddExpense() {
   }, [masterData, expenseForm.expenseHead]);
   
   const vendorSuggestions = useMemo(() => {
-    return [...new Set(masterData.map(d => d['Vendor'] || d['Vendors']).filter(Boolean))].sort();
+    return [...new Set(masterData.map(d => d['Vendor'] || d['Vendors'] || d['Vendore']).filter(Boolean))].sort();
+  }, [masterData]);
+
+  const branches = useMemo(() => {
+    return [...new Set(masterData.map(d => d['Branch'] || d['Branches']).filter(Boolean))].sort();
   }, [masterData]);
 
   const handleFileChange = async (e) => {
@@ -106,126 +107,116 @@ export default function AddExpense() {
 
   const removeFile = (idx) => setSelectedFiles(selectedFiles.filter((_, i) => i !== idx));
 
-  const addToQueue = (e) => {
-    e.preventDefault();
-    if (activeType === 'EXPENSE') {
-      if (!expenseForm.amount || !expenseForm.groupHead) { toast.error('Required fields missing'); return; }
-      const newDraft = {
-        type: 'EXPENSE',
-        label: `${expenseForm.groupHead}: ${formatCurrency(expenseForm.amount)}`,
-        files: [...selectedFiles],
-        payload: {
+  const handleDirectSubmit = async () => {
+    const form = activeType === 'EXPENSE' ? expenseForm : receiveForm;
+    if (!form.amount || parseFloat(form.amount) <= 0) {
+      toast.error('Valid amount required');
+      return;
+    }
+    if (activeType === 'EXPENSE' && (!form.groupHead || !form.expenseHead)) {
+      toast.error('Category selection required');
+      return;
+    }
+    if (!form.branch) {
+      toast.error('Branch selection required');
+      return;
+    }
+
+    setSubmitting(true);
+    setProcessingStatus('Connecting to Cloud Ledger...');
+    
+    try {
+      let payload = {};
+      if (activeType === 'EXPENSE') {
+        payload = {
           'Date': expenseForm.date,
           'Payment mode': expenseForm.paymentMode,
           'Group Head': expenseForm.groupHead,
           'Expense Head': expenseForm.expenseHead,
-          'Sub Head': expenseForm.subHead,
+          'Sub Head': expenseForm.subHead || '-',
           'Amount (INR)': parseFloat(expenseForm.amount),
           'Paid To': expenseForm.paidTo,
           'Branch': expenseForm.branch,
           'Description / Reason': expenseForm.description,
-          'Bill / Receipt': '',
-          'user': user?.name || 'Admin',
-          'Planned': '',
-          'Approval Timestamp': '',
+          'user': user?.id || 'admin',
+          'Reported by': user?.reportedBy || '',
+          'Planned': getGoogleSheetTimestamp(),
           'Status': 'PENDING',
-          'Approval / Reject - Remark': '',
           'Delete Status': 'ACTIVE',
           'Flow': 'OUT'
-        }
-      };
-      setDrafts([...drafts, newDraft]);
-      setExpenseForm({...expenseForm, amount: '', description: '', paidTo: ''});
-    } else {
-      if (!receiveForm.amount) { toast.error('Amount required'); return; }
-      const newDraft = {
-        type: 'RECEIVE',
-        label: `Receive: ${formatCurrency(receiveForm.amount)}`,
-        files: [...selectedFiles],
-        payload: {
+        };
+      } else {
+        payload = {
           'Date': receiveForm.valueDate,
           'Payment mode': receiveForm.transactionType,
           'Group Head': 'INCOME', 'Expense Head': 'RECEIVE', 'Sub Head': '-',
           'Amount (INR)': parseFloat(receiveForm.amount),
-          'Paid To': receiveForm.receivedFrom || user?.name || 'Admin',
-          'Branch': receiveForm.branch || 'Head Office',
-          'Description / Reason': receiveForm.descriptionMemo,
-          'user': user?.name || 'Admin',
+          'Paid To': receiveForm.receivedFrom || user?.id || 'admin',
+          'Branch': receiveForm.branch,
+          'Description / Reason': receiveForm.receivedFrom,
+          'user': user?.id || 'admin',
           'Planned': getGoogleSheetTimestamp(),
           'Approval Timestamp': getGoogleSheetTimestamp(),
           'Status': 'APPROVED',
           'Approval / Reject - Remark': 'Auto-approved',
           'Delete Status': 'ACTIVE',
-          'Flow': 'IN'
-        }
-      };
-      setDrafts([...drafts, newDraft]);
-      setReceiveForm({...receiveForm, amount: '', descriptionMemo: '', receivedFrom: ''});
-    }
-    setSelectedFiles([]);
-    toast.success('Added to session queue');
-  };
-
-  const commitAll = async () => {
-    if (drafts.length === 0) return;
-    setSubmitting(true);
-    setProcessingStatus('Initializing sync sequence...');
-    try {
-      let currentIdx = 1;
-      for (const draft of drafts) {
-        setProcessingStatus(`Syncing entry ${currentIdx}/${drafts.length}...`);
-        let joinedUrls = '';
-        if (draft.files && draft.files.length > 0) {
-          const uploadedUrls = [];
-          // Determine folder based on type
-          const targetFolderId = draft.type === 'RECEIVE' ? RECEIVE_FOLDER_ID : EXPENSE_FOLDER_ID;
-          
-          for (let fIdx = 0; fIdx < draft.files.length; fIdx++) {
-            const f = draft.files[fIdx];
-            setProcessingStatus(`Uploading file ${fIdx + 1}/${draft.files.length} to ${draft.type === 'RECEIVE' ? 'Receive' : 'Expense'} folder...`);
-            const res = await fetch(APPSCRIPT_URL, { 
-              method: 'POST', 
-              body: JSON.stringify({ 
-                action: 'uploadfile', 
-                file: f.base64, 
-                mimeType: f.type, 
-                fileName: f.name,
-                folderId: targetFolderId // Pass specific folder ID
-              }) 
-            });
-            const json = await res.json();
-            if (json.success) {
-              uploadedUrls.push(json.data.url);
-            } else {
-              console.error('File upload failed:', json.error);
-              toast.error(`Failed to upload ${f.name}: ${json.error}`);
-            }
-          }
-          joinedUrls = uploadedUrls.join(', ');
-        }
-        
-        setProcessingStatus(`Writing entry ${currentIdx} to ledger...`);
-        const finalPayload = { ...draft.payload, 'Bill / Receipt': joinedUrls };
-        const createRes = await fetch(APPSCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'create', data: finalPayload }) });
-        const createJson = await createRes.json();
-        if (!createJson.success) {
-          console.error('Create action failed:', createJson.error);
-        }
-        currentIdx++;
+          'Flow': 'IN',
+          'Reported by': user?.reportedBy || ''
+        };
       }
-      toast.success('All records synchronized successfully');
-      setDrafts([]); setShowFormModal(false); fetchExpenses();
-    } catch (err) { 
-      console.error('Sync Error:', err);
-      toast.error('Critical sync failure. Check console.'); 
-    } finally { 
-      setSubmitting(false); 
+
+      let joinedUrls = '';
+      if (selectedFiles.length > 0) {
+        const uploadedUrls = [];
+        const targetFolderId = activeType === 'RECEIVE' ? RECEIVE_FOLDER_ID : EXPENSE_FOLDER_ID;
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const f = selectedFiles[i];
+          setProcessingStatus(`Uploading proof ${i + 1}/${selectedFiles.length}...`);
+          const res = await fetch(APPSCRIPT_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: 'uploadfile', file: f.base64, mimeType: f.type, fileName: f.name, folderId: targetFolderId }) 
+          });
+          const json = await res.json();
+          if (json.success) uploadedUrls.push(json.data.url);
+        }
+        joinedUrls = uploadedUrls.join(', ');
+      }
+
+      setProcessingStatus('Committing transaction...');
+      const finalPayload = { ...payload, 'Bill / Receipt': joinedUrls };
+      const res = await fetch(APPSCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'create', data: finalPayload }) });
+      const json = await res.json();
+
+      if (json.success) {
+        toast.success('Transaction Submitted Successfully');
+        setShowFormModal(false);
+        fetchExpenses();
+        setExpenseForm({...expenseForm, amount:'', description:'', paidTo:''});
+        setReceiveForm({...receiveForm, amount:'', receivedFrom:''});
+        setSelectedFiles([]);
+      } else {
+        throw new Error(json.error || 'Server error');
+      }
+    } catch (err) {
+      toast.error('Submission failed: ' + err.message);
+    } finally {
+      setSubmitting(false);
       setProcessingStatus('');
     }
   };
 
+  const scopedExpenses = useMemo(() => {
+    const role = user?.role?.toUpperCase();
+    const userId = user?.id || '';
+    return expenses.filter(e => {
+      if (role === 'SUPER_ADMIN') return true;
+      if (role === 'ADMIN') return e['user'] === userId || e['Reported by'] === userId;
+      return e['user'] === userId;
+    });
+  }, [expenses, user]);
+
   const sortedExpenses = useMemo(() => {
-    return [...expenses]
+    return [...scopedExpenses]
       .filter(e => {
         if (filters.fromDate && e.Date < filters.fromDate) return false;
         if (filters.toDate && e.Date > filters.toDate) return false;
@@ -237,13 +228,13 @@ export default function AddExpense() {
         return true;
       })
       .sort((a, b) => filters.sortOrder === 'asc' ? (a.Date || '').localeCompare(b.Date || '') : (b.Date || '').localeCompare(a.Date || ''));
-  }, [expenses, filters]);
+  }, [scopedExpenses, filters]);
 
   const stats = useMemo(() => {
-    const totalIn = expenses.filter(e => e.Flow === 'IN' && e.Status === 'APPROVED').reduce((s, e) => s + (parseFloat(e['Amount (INR)']) || 0), 0);
-    const totalOut = expenses.filter(e => e.Flow === 'OUT' && e.Status === 'APPROVED').reduce((s, e) => s + (parseFloat(e['Amount (INR)']) || 0), 0);
+    const totalIn = scopedExpenses.filter(e => e.Flow === 'IN' && e.Status === 'APPROVED').reduce((s, e) => s + (parseFloat(e['Amount (INR)']) || 0), 0);
+    const totalOut = scopedExpenses.filter(e => e.Flow === 'OUT' && e.Status === 'APPROVED').reduce((s, e) => s + (parseFloat(e['Amount (INR)']) || 0), 0);
     return { totalIn, totalOut, balance: totalIn - totalOut };
-  }, [expenses]);
+  }, [scopedExpenses]);
 
   return (
     <>
@@ -392,7 +383,7 @@ export default function AddExpense() {
                           onClick={async () => {
                             if(window.confirm('Delete request?')) {
                               toast.loading('Processing...', { id: 'del' });
-                              await fetch(APPSCRIPT_URL, { method:'POST', body:JSON.stringify({action:'update', sn:e.SN, deleteStatus:'PENDING_DELETE', deletePlanned:getGoogleSheetTimestamp(), deletedBy:user?.name, isDeleteAction:true})});
+                              await fetch(APPSCRIPT_URL, { method:'POST', body:JSON.stringify({action:'update', sn:e.SN, deleteStatus:'PENDING_DELETE', deletePlanned:getGoogleSheetTimestamp(), deletedBy:user?.id, isDeleteAction:true})});
                               toast.success('Requested', { id: 'del' }); fetchExpenses();
                             }
                           }}
@@ -453,8 +444,9 @@ export default function AddExpense() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Branch</label>
-                    <select disabled={submitting} value={expenseForm.branch} onChange={e=>setExpenseForm({...expenseForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
-                      {branches.map(b=><option key={b} value={b}>{b}</option>)}
+                    <select disabled={submitting} value={expenseForm.branch} onChange={e=>setExpenseForm({...expenseForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" required>
+                      <option value="">Select Branch</option>
+                      {branches.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -499,8 +491,9 @@ export default function AddExpense() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Branch</label>
-                    <select disabled={submitting} value={receiveForm.branch} onChange={e=>setReceiveForm({...receiveForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
-                      {branches.map(b=><option key={b} value={b}>{b}</option>)}
+                    <select disabled={submitting} value={receiveForm.branch} onChange={e=>setReceiveForm({...receiveForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" required>
+                      <option value="">Select Branch</option>
+                      {branches.map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
                   <div className="md:col-span-2 space-y-1">
@@ -512,9 +505,8 @@ export default function AddExpense() {
                       value={receiveForm.receivedFrom} 
                       onChange={e=>setReceiveForm({...receiveForm, receivedFrom:e.target.value})} 
                       className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" 
-                      placeholder="Select or enter name" 
+                      placeholder="Select or enter name/details" 
                     />
-                    <textarea disabled={submitting} rows="2" value={receiveForm.descriptionMemo} onChange={e=>setReceiveForm({...receiveForm, descriptionMemo:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none disabled:bg-slate-100 disabled:text-slate-400 mt-3" placeholder="Detailed notes..." />
                   </div>
                 </div>
               )}
@@ -548,8 +540,7 @@ export default function AddExpense() {
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button disabled={submitting} onClick={addToQueue} className="flex-1 bg-blue-600 text-white py-2.5 rounded font-bold text-sm hover:bg-blue-700 shadow-sm transition-all active:scale-95 disabled:opacity-50">Add to Session ({drafts.length})</button>
-              <button onClick={commitAll} disabled={submitting || drafts.length === 0} className="px-8 bg-slate-900 text-white py-2.5 rounded font-bold text-sm hover:bg-slate-800 disabled:opacity-30 transition-all">Submit All</button>
+              <button disabled={submitting} onClick={handleDirectSubmit} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 shadow-sm transition-all active:scale-95 disabled:opacity-50">Submit Transaction</button>
             </div>
           </div>
         </div>,

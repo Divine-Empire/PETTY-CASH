@@ -51,12 +51,12 @@ const Footer = ({ isCollapsed }) => {
                 <div className="py-2.5 flex justify-center items-center">
                     <p className="text-[10px] font-semibold text-slate-300  ">
                         Powered By <a 
-                            href="#" 
+                            href="https://botivate.in" 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="text-slate-400 hover:text-blue-600 font-semibold transition-colors"
                         >
-                            Ace Mail
+                            Botivate
                         </a>
                     </p>
                 </div>

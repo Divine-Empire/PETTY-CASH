@@ -37,11 +37,26 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   ];
 
   const isPageAllowed = (label) => {
-    if (user?.role?.toUpperCase() === 'ADMIN') return true;
+    const role = user?.role?.toUpperCase();
+    
+    // Explicitly block standard users from administrative modules
+    if (role === 'USER') {
+      const adminPages = ['Approval Panel', 'Head Master', 'Settings'];
+      if (adminPages.includes(label)) return false;
+    }
+
+    // SUPER_ADMIN has unrestricted access
+    if (role === 'SUPER_ADMIN') return true;
+
+    // ADMIN and USER must respect their pageAccess settings
     if (user?.pageAccess && user.pageAccess.length > 0) {
       return user.pageAccess.includes(label);
     }
-    return true; // Simplified for brevity in this refactor
+
+    // Fallback: Default access for Dashboard and Entry if no permissions set
+    if (label === 'Dashboard' || label === 'Entry') return true;
+    
+    return false;
   };
 
   const menuItems = adminMenuItems.filter(item => isPageAllowed(item.label));
@@ -160,7 +175,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                 <div className={`flex-1 min-w-0 animate-in fade-in duration-700 ${isCollapsed ? 'lg:hidden' : ''}`}>
                   <p className="text-sm font-semibold text-slate-900 truncate  ">{user?.name || 'Authorized'}</p>
                   <p className="text-[9px] font-semibold text-slate-400   mt-1">
-                    {user?.role === 'ADMIN' ? 'Security Clearance: A' : 'Security Clearance: B'}
+                    {user?.role === 'SUPER_ADMIN' ? 'Security Clearance: S' : 
+                     user?.role === 'ADMIN' ? 'Security Clearance: A' : 'Security Clearance: B'}
                   </p>
                 </div>
               </div>
@@ -191,6 +207,13 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                 </div>
               )}
             </div>
+            {!isCollapsed && (
+              <div className="mt-4 pb-2 text-center">
+                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                  Powered By <span className="text-blue-500">Botivate</span>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </aside>

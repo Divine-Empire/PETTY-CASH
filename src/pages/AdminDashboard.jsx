@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Calendar, Wallet, Clock, TrendingUp, TrendingDown,
-  ArrowUpDown, RefreshCcw, Download, Filter, ChevronRight, BarChart3, PieChart as PieIcon, LineChart as LineIcon
+  ArrowUpDown, RefreshCcw, Download, Filter, ChevronRight, BarChart3, PieChart as PieIcon, LineChart as LineIcon, Search, FilterX
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { 
@@ -20,8 +20,7 @@ export default function AdminDashboard() {
   const { user } = useAuthStore();
   const [records, setRecords] = useState([]);
   const [fetching, setFetching] = useState(true);
-  const [dateRange, setDateRange] = useState({ from: '', to: '' });
-
+  const [filters, setFilters] = useState({ from: '', to: '', group: '', expense: '', sub: '' });
   const fetchDashboardData = async () => {
     try {
       setFetching(true);
@@ -34,15 +33,43 @@ export default function AdminDashboard() {
   useEffect(() => { fetchDashboardData(); }, []);
 
   const filteredRecords = useMemo(() => {
+    const role = user?.role?.toUpperCase();
+    const userId = user?.id || '';
+
     return records
       .filter(r => r['Delete Status'] === 'ACTIVE')
       .filter(r => {
+        // --- Role-based data scoping ---
+        if (role === 'SUPER_ADMIN') return true;
+        if (role === 'ADMIN') {
+          return r['user'] === userId || r['Reported by'] === userId;
+        }
+        return r['user'] === userId;
+      })
+      .filter(r => {
         const date = r.Date ? new Date(r.Date).toISOString().split('T')[0] : '';
-        const matchDateFrom = !dateRange.from || date >= dateRange.from;
-        const matchDateTo = !dateRange.to || date <= dateRange.to;
-        return matchDateFrom && matchDateTo;
+        const matchDateFrom = !filters.from || date >= filters.from;
+        const matchDateTo = !filters.to || date <= filters.to;
+        
+        const matchGroup = !filters.group || r['Group Head'] === filters.group;
+        const matchExpense = !filters.expense || r['Expense Head'] === filters.expense;
+        const matchSub = !filters.sub || r['Sub Head'] === filters.sub;
+
+        return matchDateFrom && matchDateTo && matchGroup && matchExpense && matchSub;
       });
-  }, [records, dateRange]);
+  }, [records, filters, user]);
+
+  const groupHeads = useMemo(() => [...new Set(records.map(r => r['Group Head']).filter(Boolean))].sort(), [records]);
+  const expenseHeads = useMemo(() => [...new Set(records.map(r => r['Expense Head']).filter(Boolean))].sort(), [records]);
+  const subHeads = useMemo(() => [...new Set(records.map(r => r['Sub Head']).filter(Boolean))].sort(), [records]);
+
+  const setPeriod = (months) => {
+    const to = new Date().toISOString().split('T')[0];
+    const fromDate = new Date();
+    fromDate.setMonth(fromDate.getMonth() - months);
+    const from = fromDate.toISOString().split('T')[0];
+    setFilters({ ...filters, from, to });
+  };
 
   const stats = useMemo(() => {
     const totalIn = filteredRecords.filter(r => r.Flow === 'IN' && r.Status === 'APPROVED').reduce((s, r) => s + (parseFloat(r['Amount (INR)']) || 0), 0);
@@ -61,6 +88,31 @@ export default function AdminDashboard() {
     });
     return Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date)).slice(-15);
   }, [filteredRecords]);
+
+  const handleExportCSV = () => {
+    if (filteredRecords.length === 0) { toast.error('No data to export'); return; }
+    
+    const headers = Object.keys(filteredRecords[0]);
+    const csvContent = [
+      headers.join(','),
+      ...filteredRecords.map(row => headers.map(h => {
+        let val = row[h] === undefined || row[h] === null ? '' : String(row[h]);
+        if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+          val = `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      }).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Ace_Ledger_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const categoryData = useMemo(() => {
     const catMap = {};
@@ -89,9 +141,59 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-sm text-slate-500">Financial insights and performance analytics</p>
         </div>
-        <button onClick={fetchDashboardData} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
-          <RefreshCcw size={14} /> Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-md text-xs font-bold text-white hover:bg-slate-800 transition-colors shadow-sm">
+            <Download size={14} /> Export
+          </button>
+          <button onClick={fetchDashboardData} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+            <RefreshCcw size={14} className={fetching ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3 no-print">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-md px-3 py-1.5 min-w-[150px]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">From</span>
+            <input type="date" value={filters.from} onChange={e => setFilters({...filters, from: e.target.value})} className="text-xs font-bold text-slate-700 bg-transparent border-none outline-none p-0 focus:ring-0" />
+          </div>
+          <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-md px-3 py-1.5 min-w-[150px]">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">To</span>
+            <input type="date" value={filters.to} onChange={e => setFilters({...filters, to: e.target.value})} className="text-xs font-bold text-slate-700 bg-transparent border-none outline-none p-0 focus:ring-0" />
+          </div>
+          <div className="flex gap-2">
+            {[1, 2, 3].map(m => (
+              <button key={m} onClick={() => setPeriod(m)} className="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-[10px] font-bold text-slate-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
+                {m} Month{m > 1 ? 's' : ''}
+              </button>
+            ))}
+          </div>
+          {(filters.from || filters.to || filters.group || filters.expense || filters.sub) && (
+            <button 
+              onClick={() => setFilters({ from: '', to: '', group: '', expense: '', sub: '' })} 
+              className="ml-auto p-2 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
+              title="Reset Filters"
+            >
+              <FilterX size={16} />
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <select value={filters.group} onChange={e => setFilters({...filters, group: e.target.value, expense: '', sub: ''})} className="bg-white border border-slate-300 rounded-md px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
+            <option value="">All Group Heads</option>
+            {groupHeads.map(g => <option key={g} value={g}>{g}</option>)}
+          </select>
+          <select value={filters.expense} onChange={e => setFilters({...filters, expense: e.target.value, sub: ''})} className="bg-white border border-slate-300 rounded-md px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
+            <option value="">All Expense Heads</option>
+            {expenseHeads.map(e => <option key={e} value={e}>{e}</option>)}
+          </select>
+          <select value={filters.sub} onChange={e => setFilters({...filters, sub: e.target.value})} className="bg-white border border-slate-300 rounded-md px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
+            <option value="">All Sub Heads</option>
+            {subHeads.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Metrics Cards */}

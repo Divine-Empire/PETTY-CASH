@@ -32,14 +32,14 @@ function App() {
           }>
             <Route index element={<ProtectedRoute requiredPage="Dashboard"><AdminDashboard /></ProtectedRoute>} />
             <Route path="dashboard" element={<ProtectedRoute requiredPage="Dashboard"><AdminDashboard /></ProtectedRoute>} />
-            <Route path="add-expense" element={<ProtectedRoute requiredPage="Transactions"><AddExpense /></ProtectedRoute>} />
+            <Route path="add-expense" element={<ProtectedRoute requiredPage="Entry"><AddExpense /></ProtectedRoute>} />
             
             {/* Admin/Permission Restricted Routes */}
-            <Route path="settings" element={<ProtectedRoute requiredPage="Settings" allowedRoles={['ADMIN']}><Settings /></ProtectedRoute>} />
-            <Route path="head-master" element={<ProtectedRoute requiredPage="Head Master" allowedRoles={['ADMIN']}><HeadMaster /></ProtectedRoute>} />
-            <Route path="ledger" element={<ProtectedRoute allowedRoles={['ADMIN']}><Ledger /></ProtectedRoute>} />
-            <Route path="approval-panel" element={<ProtectedRoute requiredPage="Approval Panel" allowedRoles={['ADMIN']}><ApprovalPanel /></ProtectedRoute>} />
-            <Route path="reports" element={<ProtectedRoute requiredPage="Reports" allowedRoles={['ADMIN']}><Report /></ProtectedRoute>} />
+            <Route path="settings" element={<ProtectedRoute requiredPage="Settings" allowedRoles={['ADMIN','SUPER_ADMIN']}><Settings /></ProtectedRoute>} />
+            <Route path="head-master" element={<ProtectedRoute requiredPage="Head Master" allowedRoles={['ADMIN','SUPER_ADMIN']}><HeadMaster /></ProtectedRoute>} />
+            <Route path="ledger" element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><Ledger /></ProtectedRoute>} />
+            <Route path="approval-panel" element={<ProtectedRoute requiredPage="Approval Panel" allowedRoles={['ADMIN','SUPER_ADMIN']}><ApprovalPanel /></ProtectedRoute>} />
+            <Route path="reports" element={<ProtectedRoute requiredPage="Reports" allowedRoles={['ADMIN','SUPER_ADMIN']}><Report /></ProtectedRoute>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

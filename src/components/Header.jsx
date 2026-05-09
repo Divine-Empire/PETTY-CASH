@@ -32,7 +32,8 @@ const Header = ({ onMenuClick, user }) => {
                 {user?.name || 'Admin'}
               </p>
               <p className="text-[10px]  font-semibold text-blue-600 tracking-wider">
-                {user?.role === 'ADMIN' ? 'Administrator' : 'Employee'}
+                {user?.role === 'SUPER_ADMIN' ? 'Executive Admin' : 
+                 user?.role === 'ADMIN' ? 'Administrator' : 'Team Member'}
               </p>
             </div>
             <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-all overflow-hidden shadow-sm border border-slate-300">

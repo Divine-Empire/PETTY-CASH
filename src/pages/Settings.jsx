@@ -5,26 +5,18 @@ import {
   RefreshCw, Loader2, Users, UserCheck, UserPlus,
   ShieldCheck, MapPin, Building2
 } from 'lucide-react';
-import { getAuthUser } from '../utils/storageManager';
+import { useAuthStore } from '../store/authStore';
 
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
 
-const branches = [
-  'Head Office', 'Mumbai Branch', 'Delhi Branch', 'Bangalore Branch',
-  'Chennai Branch', 'Hyderabad Branch', 'Kolkata Branch', 'Pune Branch'
-];
-
-const departments = [
-  'Accounts', 'Sales', 'Operations', 'HR', 'IT', 'Marketing', 'Admin', 'Finance'
-];
-
 const availablePages = [
-  'Dashboard', 'Entry', 'Approval Panel', 'Expense List',
-  'Petty Cash', 'Reports', 'Head Master', 'Settings'
+  'Dashboard', 'Entry', 'Approval Panel', 'Head Master', 'Settings'
 ];
 
 export default function Settings() {
+  const { user: authUser } = useAuthStore();
   const [users, setUsers] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [fetching, setFetching] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -32,16 +24,15 @@ export default function Settings() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUserId, setEditingUserId] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [authUser, setAuthUser] = useState(null);
 
   const [newUser, setNewUser] = useState({
     name: '', id: '', password: '', role: 'USER',
-    branch: 'Head Office', department: 'Accounts', pageAccess: []
+    branch: 'Head Office', department: 'Accounts', 
+    reportedBy: '', pageAccess: ['Dashboard', 'Entry']
   });
 
   const fetchUsers = useCallback(async () => {
     try {
-      setFetching(true);
       const res = await fetch(APPSCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'readSetting' }) });
       const json = await res.json();
       if (json.success) {
@@ -49,23 +40,73 @@ export default function Settings() {
           name: row['user'] || '', id: row['user name'] || '', password: row['password'] || '',
           role: (row['role'] || 'USER').toUpperCase(), branch: row['branch'] || 'Head Office',
           department: row['department'] || 'Accounts',
+          reportedBy: row['Reported by'] || '',
           pageAccess: row['Page access'] ? row['Page access'].split(',').map(s => s.trim()) : []
         })).filter(u => u.id);
         setUsers(mapped);
       }
-    } catch { toast.error('Error loading user data'); } finally { setFetching(false); }
+    } catch { toast.error('Error loading user data'); }
   }, []);
 
-  useEffect(() => { fetchUsers(); setAuthUser(getAuthUser()); }, [fetchUsers]);
+  const fetchMasterData = useCallback(async () => {
+    try {
+      const res = await fetch(APPSCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'readMaster' }) });
+      const json = await res.json();
+      if (json.success) {
+        const raw = json.data || [];
+        const b = [...new Set(raw.map(r => r['Branch'] || r['Branches']).filter(Boolean))].sort();
+        setBranches(b);
+        
+        // If creating new user and branches exist, set default
+        if (b.length > 0 && !editingUserId && !newUser.branch) {
+          setNewUser(prev => ({ ...prev, branch: b[0] }));
+        }
+      }
+    } catch {}
+  }, [editingUserId, newUser.branch]);
 
-  const filteredUsers = users.filter(u => u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || u.id?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const init = async () => {
+    setFetching(true);
+    await Promise.all([fetchUsers(), fetchMasterData()]);
+    setFetching(false);
+  };
+
+  useEffect(() => { init(); }, []);
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          u.id?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const authRole = authUser?.role?.toUpperCase();
+    const authId = authUser?.id || '';
+
+    if (authRole === 'SUPER_ADMIN') return matchesSearch;
+    
+    // ADMIN only sees and manages standard USERs who report to them
+    return matchesSearch && u.role === 'USER' && u.reportedBy === authId;
+  });
 
   const handleSaveUser = async () => {
     if (!newUser.name || !newUser.id || !newUser.password) return toast.error('Fill required fields');
+    
+    // Validation: Admin must have a manager
+    if (newUser.role === 'ADMIN' && !newUser.reportedBy) {
+      return toast.error('Administrators must report to a Manager (Super Admin)');
+    }
+
     setSubmitting(true);
     const toastId = toast.loading('Saving...');
     try {
-      const payload = { 'user': newUser.name, 'user name': newUser.id, 'password': newUser.password, 'role': newUser.role, 'branch': newUser.branch, 'department': newUser.department, 'Page access': newUser.pageAccess.join(',') };
+      const payload = { 
+        'user': newUser.name, 
+        'user name': newUser.id, 
+        'password': newUser.password, 
+        'role': newUser.role, 
+        'branch': newUser.branch, 
+        'department': newUser.department, 
+        'Reported by': newUser.reportedBy,
+        'Page access': newUser.pageAccess.join(',') 
+      };
       let res;
       if (editingUserId) {
         res = await fetch(APPSCRIPT_URL, { method:'POST', body:JSON.stringify({ action:'updateSetting', data: { oldValue: {'user name': editingUserId}, newValue: payload }})});
@@ -101,7 +142,17 @@ export default function Settings() {
           <button onClick={fetchUsers} className="p-2 bg-white border border-slate-300 rounded-md text-slate-500 hover:bg-slate-50 transition-colors shadow-sm">
             <RefreshCw size={18} className={fetching ? 'animate-spin' : ''} />
           </button>
-          <button onClick={() => { setEditingUserId(null); setNewUser({name:'', id:'', password:'', role:'USER', branch:'Head Office', department:'Accounts', pageAccess:[]}); setIsModalOpen(true); }} className="px-4 py-2 bg-slate-900 text-white rounded-md text-sm font-bold hover:bg-slate-800 shadow-sm flex items-center gap-2">
+          <button onClick={() => { 
+            setEditingUserId(null); 
+            setNewUser({
+              name:'', id:'', password:'', role:'USER', 
+              branch: branches[0] || 'Head Office', 
+              department:'Accounts', 
+              reportedBy:'', 
+              pageAccess:['Dashboard', 'Entry']
+            }); 
+            setIsModalOpen(true); 
+          }} className="px-4 py-2 bg-slate-900 text-white rounded-md text-sm font-bold hover:bg-slate-800 shadow-sm flex items-center gap-2">
             <UserPlus size={16} /> Add User
           </button>
         </div>
@@ -168,8 +219,14 @@ export default function Settings() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-center gap-2">
-                      <button onClick={()=> { setEditingUserId(u.id); setNewUser(u); setIsModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"><Edit2 size={14}/></button>
-                      <button onClick={()=> handleDeleteUser(u.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"><Trash2 size={14}/></button>
+                      {(authUser?.role === 'SUPER_ADMIN' || (authUser?.role === 'ADMIN' && u.role === 'USER')) ? (
+                        <>
+                          <button onClick={()=> { setEditingUserId(u.id); setNewUser(u); setIsModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"><Edit2 size={14}/></button>
+                          <button onClick={()=> handleDeleteUser(u.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"><Trash2 size={14}/></button>
+                        </>
+                      ) : (
+                        <span className="p-1.5 text-slate-300 cursor-not-allowed" title="Permission Denied"><ShieldCheck size={14}/></span>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -205,30 +262,67 @@ export default function Settings() {
                   <button onClick={()=> setShowPassword(!showPassword)} className="absolute right-3 top-2 text-slate-400">{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button>
                 </div>
               </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Role</label>
+                <select 
+                  value={newUser.role} 
+                  onChange={e=>setNewUser({...newUser, role:e.target.value})} 
+                  disabled={authUser?.role === 'ADMIN'}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none disabled:bg-slate-50 disabled:cursor-not-allowed"
+                >
+                  <option value="USER">Standard User</option>
+                  {authUser?.role === 'SUPER_ADMIN' && <option value="ADMIN">Administrator</option>}
+                  {authUser?.role === 'SUPER_ADMIN' && <option value="SUPER_ADMIN">Super Admin</option>}
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Role</label>
-                  <select value={newUser.role} onChange={e=>setNewUser({...newUser, role:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none">
-                    <option value="USER">Standard User</option>
-                    <option value="ADMIN">Administrator</option>
-                  </select>
-                </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Branch</label>
                   <select value={newUser.branch} onChange={e=>setNewUser({...newUser, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none">
                     {branches.map(b=><option key={b} value={b}>{b}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Department</label>
+                  <input 
+                    value={newUser.department} 
+                    onChange={e=>setNewUser({...newUser, department:e.target.value})} 
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none"
+                    placeholder="e.g. Accounts, Sales..."
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Reported To (Manager)</label>
+                <select 
+                  value={newUser.reportedBy} 
+                  onChange={e=>setNewUser({...newUser, reportedBy:e.target.value})} 
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-indigo-500 outline-none"
+                >
+                  {newUser.role !== 'ADMIN' && <option value="">None / Self</option>}
+                  {users
+                    .filter(u => u.role === 'ADMIN' || u.role === 'SUPER_ADMIN')
+                    .map(u => (
+                      <option key={u.id} value={u.id}>{u.name} (@{u.id})</option>
+                    ))
+                  }
+                </select>
               </div>
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Module Access</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                   {availablePages.map(page => (
-                    <label key={page} className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-all ${newUser.pageAccess.includes(page) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}>
-                      <input type="checkbox" className="hidden" checked={newUser.pageAccess.includes(page)} onChange={()=>{
-                        const upd = newUser.pageAccess.includes(page) ? newUser.pageAccess.filter(p=>p!==page) : [...newUser.pageAccess, page];
-                        setNewUser({...newUser, pageAccess: upd});
-                      }} />
+                    <label key={page} className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-all ${newUser.pageAccess.includes(page) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'} ${(newUser.role === 'ADMIN' || newUser.role === 'SUPER_ADMIN') && authUser?.role?.toUpperCase() !== 'SUPER_ADMIN' ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input 
+                        type="checkbox" 
+                        className="hidden" 
+                        checked={newUser.pageAccess.includes(page)} 
+                        disabled={(newUser.role === 'ADMIN' || newUser.role === 'SUPER_ADMIN') && authUser?.role?.toUpperCase() !== 'SUPER_ADMIN'}
+                        onChange={()=>{
+                          const upd = newUser.pageAccess.includes(page) ? newUser.pageAccess.filter(p=>p!==page) : [...newUser.pageAccess, page];
+                          setNewUser({...newUser, pageAccess: upd});
+                        }} 
+                      />
                       <span className="text-[11px] font-bold">{page}</span>
                     </label>
                   ))}

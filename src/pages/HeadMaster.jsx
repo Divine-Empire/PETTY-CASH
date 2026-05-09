@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import toast from 'react-hot-toast';
 import {
   Plus, Trash2, Edit2, X, Check, RefreshCcw,
-  Layers, Box, Subtitles, Search, Loader2, FilterX, User
+  Layers, Box, Subtitles, Search, Loader2, FilterX, User, Building2
 } from 'lucide-react';
 
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
@@ -28,8 +28,9 @@ export default function HeadMaster() {
           'Group Head': String(r['Group Head'] || r['Group Heads'] || '').trim(),
           'Expense Head': String(r['Expense Head'] || r['Expense Heads'] || '').trim(),
           'Sub Head': String(r['Sub Head'] || r['Sub Heads'] || '').trim(),
-          'Vendor': String(r['Vendor'] || r['Vendors'] || '').trim(),
-        })).filter(r => r['Group Head'] || r['Expense Head'] || r['Sub Head'] || r['Vendor']);
+          'Vendore': String(r['Vendore'] || r['Vendor'] || r['Vendors'] || '').trim(),
+          'Branch': String(r['Branch'] || r['Branches'] || '').trim(),
+        })).filter(r => r['Group Head'] || r['Expense Head'] || r['Sub Head'] || r['Vendore'] || r['Branch']);
         setMasterData(formatted);
       }
     } catch { toast.error('Error loading Master data'); } finally { if (!silent) setFetching(false); }
@@ -37,38 +38,30 @@ export default function HeadMaster() {
 
   useEffect(() => { fetchMasterData(); }, [fetchMasterData]);
 
-  // Logic: If a group is selected, filter expenses. If an expense is selected, filter subs.
-  // BUT: Show all unique items in each column if no parent is selected.
-  
   const groupHeads = useMemo(() => {
     return [...new Set(masterData.map(d => d['Group Head']).filter(Boolean))]
-      .filter(gh => gh.toLowerCase().includes(searchTerm.toLowerCase())).sort();
+      .filter(g => g.toLowerCase().includes(searchTerm.toLowerCase())).sort();
   }, [masterData, searchTerm]);
 
   const expenseHeads = useMemo(() => {
-    let base = masterData;
-    if (selectedGroup) {
-      base = base.filter(d => d['Group Head'] === selectedGroup);
-    }
-    return [...new Set(base.map(d => d['Expense Head']).filter(Boolean))]
-      .filter(eh => eh.toLowerCase().includes(searchTerm.toLowerCase())).sort();
-  }, [masterData, selectedGroup, searchTerm]);
+    return [...new Set(masterData.map(d => d['Expense Head']).filter(Boolean))]
+      .filter(e => e.toLowerCase().includes(searchTerm.toLowerCase())).sort();
+  }, [masterData, searchTerm]);
 
   const subHeads = useMemo(() => {
-    let base = masterData;
-    if (selectedGroup) base = base.filter(d => d['Group Head'] === selectedGroup);
-    if (selectedExpense) base = base.filter(d => d['Expense Head'] === selectedExpense);
-    return [...new Set(base.map(d => d['Sub Head']).filter(Boolean))]
-      .filter(sh => sh.toLowerCase().includes(searchTerm.toLowerCase())).sort();
-  }, [masterData, selectedGroup, selectedExpense, searchTerm]);
+    return [...new Set(masterData.map(d => d['Sub Head']).filter(Boolean))]
+      .filter(s => s.toLowerCase().includes(searchTerm.toLowerCase())).sort();
+  }, [masterData, searchTerm]);
 
   const vendors = useMemo(() => {
-    let base = masterData;
-    if (selectedGroup) base = base.filter(d => d['Group Head'] === selectedGroup);
-    if (selectedExpense) base = base.filter(d => d['Expense Head'] === selectedExpense);
-    return [...new Set(base.map(d => d['Vendor']).filter(Boolean))]
+    return [...new Set(masterData.map(d => d['Vendore']).filter(Boolean))]
       .filter(v => v.toLowerCase().includes(searchTerm.toLowerCase())).sort();
-  }, [masterData, selectedGroup, selectedExpense, searchTerm]);
+  }, [masterData, searchTerm]);
+
+  const branchesMaster = useMemo(() => {
+    return [...new Set(masterData.map(d => d['Branch']).filter(Boolean))]
+      .filter(b => b.toLowerCase().includes(searchTerm.toLowerCase())).sort();
+  }, [masterData, searchTerm]);
 
   const callApi = async (action, data) => {
     setSaving(true);
@@ -85,22 +78,25 @@ export default function HeadMaster() {
     if (!val) return;
     try {
       if (activeAction.type === 'add') {
-        const payload = activeAction.level === 'group' ? { 'Group Head': val, 'Expense Head': '', 'Sub Head': '', 'Vendor': '' } :
-                        activeAction.level === 'expense' ? { 'Group Head': selectedGroup || '', 'Expense Head': val, 'Sub Head': '', 'Vendor': '' } :
-                        activeAction.level === 'sub' ? { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': val, 'Vendor': '' } :
-                        { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': '', 'Vendor': val };
+        const payload = activeAction.level === 'group' ? { 'Group Head': val, 'Expense Head': '', 'Sub Head': '', 'Vendor': '', 'Branch': '' } :
+                        activeAction.level === 'expense' ? { 'Group Head': selectedGroup || '', 'Expense Head': val, 'Sub Head': '', 'Vendore': '', 'Branch': '' } :
+                        activeAction.level === 'sub' ? { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': val, 'Vendore': '', 'Branch': '' } :
+                        activeAction.level === 'vendor' ? { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': '', 'Vendore': val, 'Branch': '' } :
+                        { 'Group Head': '', 'Expense Head': '', 'Sub Head': '', 'Vendor': '', 'Branch': val };
         await callApi('createMaster', payload);
       } else {
         const { level, oldValue } = activeAction;
         const oldV = level === 'group' ? { 'Group Head': oldValue } : 
                     level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': oldValue } : 
                     level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': oldValue } :
-                    { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendor': oldValue };
+                    level === 'vendor' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendore': oldValue } :
+                    { 'Branch': oldValue };
         
         const newV = level === 'group' ? { 'Group Head': val } : 
                     level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': val } : 
                     level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': val } :
-                    { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendor': val };
+                    level === 'vendor' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendore': val } :
+                    { 'Branch': val };
         await callApi('updateMaster', { level, oldValue: oldV, newValue: newV });
       }
       toast.success('Updated'); setActiveAction(null); setInputValue(''); fetchMasterData(true);
@@ -112,7 +108,8 @@ export default function HeadMaster() {
     const payload = level === 'group' ? { 'Group Head': value } : 
                    level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': value } : 
                    level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': value } :
-                   { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendor': value };
+                   level === 'vendor' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendore': value } :
+                   { 'Branch': value };
     try { await callApi('deleteMaster', payload); toast.success('Deleted'); fetchMasterData(true); } catch {}
   };
 
@@ -143,61 +140,95 @@ export default function HeadMaster() {
         </div>
       </div>
 
-      {/* Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Columns Grid - Industrial Flat UI */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         
         {/* Level 1: Groups */}
-        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[550px] shadow-sm">
-          <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[500px] shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <div className="flex items-center gap-2">
-              <Layers size={14} className="text-blue-600" />
-              <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Group Heads</span>
+              <Layers size={14} className="text-slate-500" />
+              <span className="text-[10px] font-bold uppercase text-slate-600 tracking-wider">Group Heads</span>
             </div>
-            <button onClick={() => { setActiveAction({type:'add', level:'group'}); setInputValue(''); }} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Plus size={16} /></button>
+            <button 
+              onClick={() => { setActiveAction({type:'add', level:'group'}); setInputValue(''); }} 
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            >
+              <Plus size={16} />
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {activeAction?.level === 'group' && activeAction.type === 'add' && (
-               <div className="p-2 border border-blue-200 rounded-md bg-blue-50/30 flex gap-1">
-                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500 disabled:opacity-50" placeholder="New Group..." />
-                <button disabled={saving} onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm disabled:opacity-50"><Check size={14}/></button>
-                <button disabled={saving} onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400 disabled:opacity-50"><X size={14}/></button>
-               </div>
+              <div className="p-2 border border-blue-200 rounded bg-blue-50/50 flex gap-1">
+                <input 
+                  disabled={saving} 
+                  autoFocus 
+                  value={inputValue} 
+                  onChange={e => setInputValue(e.target.value)} 
+                  className="flex-1 text-xs px-2 py-1 rounded border border-slate-200 outline-none focus:border-blue-500 bg-white" 
+                  placeholder="New..." 
+                />
+                <button onClick={handleCommit} className="p-1 bg-blue-600 text-white rounded shadow-sm"><Check size={14}/></button>
+                <button onClick={() => setActiveAction(null)} className="p-1 text-slate-400"><X size={14}/></button>
+              </div>
             )}
-            {groupHeads.map(gh => (
-              <div key={gh} onClick={() => {setSelectedGroup(selectedGroup === gh ? null : gh); setSelectedExpense(null);}} className={`group flex items-center justify-between px-4 py-3 rounded-md cursor-pointer transition-all ${selectedGroup === gh ? 'bg-slate-900 text-white shadow-md' : 'hover:bg-slate-50 text-slate-700'}`}>
-                <span className="text-xs font-bold">{gh}</span>
-                <div className={`flex gap-1 ${selectedGroup === gh ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  <button onClick={e => {e.stopPropagation(); setActiveAction({type:'edit', level:'group', oldValue:gh}); setInputValue(gh);}} className="p-1 hover:bg-white/10 rounded"><Edit2 size={12}/></button>
-                  <button onClick={e => {e.stopPropagation(); handleDelete('group', gh);}} className="p-1 hover:bg-rose-500 rounded"><Trash2 size={12}/></button>
+            {groupHeads.map(g => (
+              <div 
+                key={g} 
+                onClick={() => {setSelectedGroup(g);}} 
+                className={`group flex items-center justify-between px-3 py-2 rounded transition-all cursor-pointer border ${
+                  selectedGroup === g 
+                  ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                  : 'bg-white border-transparent text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-xs font-semibold truncate flex-1">{g}</span>
+                <div className={`flex gap-0.5 transition-all ${selectedGroup === g ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  <button onClick={(e) => {e.stopPropagation(); setActiveAction({type:'edit', level:'group', oldValue:g}); setInputValue(g);}} className="p-1 hover:bg-blue-100 rounded text-blue-600"><Edit2 size={12}/></button>
+                  <button onClick={(e) => {e.stopPropagation(); handleDelete('group', g);}} className="p-1 hover:bg-rose-100 rounded text-rose-600"><Trash2 size={12}/></button>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Level 2: Expense Heads */}
-        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[550px] shadow-sm">
-          <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        {/* Level 2: Expenses */}
+        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[500px] shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <div className="flex items-center gap-2">
-              <Box size={14} className="text-blue-600" />
-              <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Expense Heads</span>
+              <Box size={14} className="text-slate-500" />
+              <span className="text-[10px] font-bold uppercase text-slate-600 tracking-wider">Expense Heads</span>
             </div>
-            <button onClick={() => { setActiveAction({type:'add', level:'expense'}); setInputValue(''); }} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Plus size={16} /></button>
+            <button 
+              disabled={!selectedGroup}
+              onClick={() => { setActiveAction({type:'add', level:'expense'}); setInputValue(''); }} 
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30"
+            >
+              <Plus size={16} />
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {activeAction?.level === 'expense' && activeAction.type === 'add' && (
-              <div className="p-2 border border-blue-200 rounded-md bg-blue-50/30 flex gap-1">
-                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500 disabled:opacity-50" placeholder="New Expense..." />
-                <button disabled={saving} onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm disabled:opacity-50"><Check size={14}/></button>
-                <button disabled={saving} onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400 disabled:opacity-50"><X size={14}/></button>
+              <div className="p-2 border border-blue-200 rounded bg-blue-50/50 flex gap-1">
+                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1 rounded border border-slate-200 outline-none focus:border-blue-500 bg-white" placeholder="New..." />
+                <button onClick={handleCommit} className="p-1 bg-blue-600 text-white rounded shadow-sm"><Check size={14}/></button>
+                <button onClick={() => setActiveAction(null)} className="p-1 text-slate-400"><X size={14}/></button>
               </div>
             )}
-            {expenseHeads.map(eh => (
-              <div key={eh} onClick={() => setSelectedExpense(selectedExpense === eh ? null : eh)} className={`group flex items-center justify-between px-4 py-3 rounded-md cursor-pointer transition-all ${selectedExpense === eh ? 'bg-slate-900 text-white shadow-md' : 'hover:bg-slate-50 text-slate-700'}`}>
-                <span className="text-xs font-bold">{eh}</span>
-                <div className={`flex gap-1 ${selectedExpense === eh ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  <button onClick={e => {e.stopPropagation(); setActiveAction({type:'edit', level:'expense', oldValue:eh}); setInputValue(eh);}} className="p-1 hover:bg-white/10 rounded"><Edit2 size={12}/></button>
-                  <button onClick={e => {e.stopPropagation(); handleDelete('expense', eh);}} className="p-1 hover:bg-rose-500 rounded"><Trash2 size={12}/></button>
+            {expenseHeads.map(e => (
+              <div 
+                key={e} 
+                onClick={() => setSelectedExpense(e)} 
+                className={`group flex items-center justify-between px-3 py-2 rounded transition-all cursor-pointer border ${
+                  selectedExpense === e 
+                  ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                  : 'bg-white border-transparent text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-xs font-semibold truncate flex-1">{e}</span>
+                <div className={`flex gap-0.5 transition-all ${selectedExpense === e ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                  <button onClick={(ev) => {ev.stopPropagation(); setActiveAction({type:'edit', level:'expense', oldValue:e}); setInputValue(e);}} className="p-1 hover:bg-blue-100 rounded text-blue-600"><Edit2 size={12}/></button>
+                  <button onClick={(ev) => {ev.stopPropagation(); handleDelete('expense', e);}} className="p-1 hover:bg-rose-100 rounded text-rose-600"><Trash2 size={12}/></button>
                 </div>
               </div>
             ))}
@@ -205,28 +236,37 @@ export default function HeadMaster() {
         </div>
 
         {/* Level 3: Sub Heads */}
-        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[550px] shadow-sm">
-          <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[500px] shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <div className="flex items-center gap-2">
-              <Subtitles size={14} className="text-blue-600" />
-              <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Sub Heads</span>
+              <Subtitles size={14} className="text-slate-500" />
+              <span className="text-[10px] font-bold uppercase text-slate-600 tracking-wider">Sub Heads</span>
             </div>
-            <button onClick={() => { setActiveAction({type:'add', level:'sub'}); setInputValue(''); }} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Plus size={16} /></button>
+            <button 
+              disabled={!selectedExpense}
+              onClick={() => { setActiveAction({type:'add', level:'sub'}); setInputValue(''); }} 
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30"
+            >
+              <Plus size={16} />
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {activeAction?.level === 'sub' && activeAction.type === 'add' && (
-              <div className="p-2 border border-blue-200 rounded-md bg-blue-50/30 flex gap-1">
-                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500 disabled:opacity-50" placeholder="New Sub..." />
-                <button disabled={saving} onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm disabled:opacity-50"><Check size={14}/></button>
-                <button disabled={saving} onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400 disabled:opacity-50"><X size={14}/></button>
+              <div className="p-2 border border-blue-200 rounded bg-blue-50/50 flex gap-1">
+                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1 rounded border border-slate-200 outline-none focus:border-blue-500 bg-white" placeholder="New..." />
+                <button onClick={handleCommit} className="p-1 bg-blue-600 text-white rounded shadow-sm"><Check size={14}/></button>
+                <button onClick={() => setActiveAction(null)} className="p-1 text-slate-400"><X size={14}/></button>
               </div>
             )}
-            {subHeads.map(sh => (
-              <div key={sh} className="group flex items-center justify-between px-4 py-3 rounded-md transition-all hover:bg-slate-50 text-slate-700 border border-transparent">
-                <span className="text-xs font-bold">{sh}</span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => {setActiveAction({type:'edit', level:'sub', oldValue:sh}); setInputValue(sh);}} className="p-1 hover:bg-indigo-50 text-indigo-600 rounded"><Edit2 size={12}/></button>
-                  <button onClick={() => handleDelete('sub', sh)} className="p-1 hover:bg-rose-50 text-rose-600 rounded"><Trash2 size={12}/></button>
+            {subHeads.map(s => (
+              <div 
+                key={s} 
+                className={`group flex items-center justify-between px-3 py-2 rounded transition-all border bg-white border-transparent text-slate-600 hover:bg-slate-50`}
+              >
+                <span className="text-xs font-semibold truncate flex-1">{s}</span>
+                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                  <button onClick={() => {setActiveAction({type:'edit', level:'sub', oldValue:s}); setInputValue(s);}} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"><Edit2 size={12}/></button>
+                  <button onClick={() => handleDelete('sub', s)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-rose-600"><Trash2 size={12}/></button>
                 </div>
               </div>
             ))}
@@ -234,28 +274,68 @@ export default function HeadMaster() {
         </div>
 
         {/* Level 4: Vendors */}
-        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[550px] shadow-sm">
-          <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[500px] shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
             <div className="flex items-center gap-2">
-              <User size={14} className="text-blue-600" />
-              <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Vendors</span>
+              <User size={14} className="text-slate-500" />
+              <span className="text-[10px] font-bold uppercase text-slate-600 tracking-wider">Vendore</span>
             </div>
-            <button onClick={() => { setActiveAction({type:'add', level:'vendor'}); setInputValue(''); }} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Plus size={16} /></button>
+            <button 
+              disabled={!selectedExpense}
+              onClick={() => { setActiveAction({type:'add', level:'vendor'}); setInputValue(''); }} 
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30"
+            >
+              <Plus size={16} />
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {activeAction?.level === 'vendor' && activeAction.type === 'add' && (
-              <div className="p-2 border border-blue-200 rounded-md bg-blue-50/30 flex gap-1">
-                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500 disabled:opacity-50" placeholder="New Vendor..." />
-                <button disabled={saving} onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm disabled:opacity-50"><Check size={14}/></button>
-                <button disabled={saving} onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400 disabled:opacity-50"><X size={14}/></button>
+              <div className="p-2 border border-blue-200 rounded bg-blue-50/50 flex gap-1">
+                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1 rounded border border-slate-200 outline-none focus:border-blue-500 bg-white" placeholder="New..." />
+                <button onClick={handleCommit} className="p-1 bg-blue-600 text-white rounded shadow-sm"><Check size={14}/></button>
+                <button onClick={() => setActiveAction(null)} className="p-1 text-slate-400"><X size={14}/></button>
               </div>
             )}
             {vendors.map(v => (
-              <div key={v} className="group flex items-center justify-between px-4 py-3 rounded-md transition-all hover:bg-slate-50 text-slate-700 border border-transparent">
-                <span className="text-xs font-bold">{v}</span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => {setActiveAction({type:'edit', level:'vendor', oldValue:v}); setInputValue(v);}} className="p-1 hover:bg-blue-50 text-blue-600 rounded"><Edit2 size={12}/></button>
-                  <button onClick={() => handleDelete('vendor', v)} className="p-1 hover:bg-rose-50 text-rose-600 rounded"><Trash2 size={12}/></button>
+              <div key={v} className="group flex items-center justify-between px-3 py-2 rounded transition-all border bg-white border-transparent text-slate-600 hover:bg-slate-50">
+                <span className="text-xs font-semibold truncate flex-1">{v}</span>
+                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                  <button onClick={() => {setActiveAction({type:'edit', level:'vendor', oldValue:v}); setInputValue(v);}} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"><Edit2 size={12}/></button>
+                  <button onClick={() => handleDelete('vendor', v)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-rose-600"><Trash2 size={12}/></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Level 5: Branches */}
+        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[500px] shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <div className="flex items-center gap-2">
+              <Building2 size={14} className="text-slate-500" />
+              <span className="text-[10px] font-bold uppercase text-slate-600 tracking-wider">Branches</span>
+            </div>
+            <button 
+              onClick={() => { setActiveAction({type:'add', level:'branch'}); setInputValue(''); }} 
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {activeAction?.level === 'branch' && activeAction.type === 'add' && (
+              <div className="p-2 border border-blue-200 rounded bg-blue-50/50 flex gap-1">
+                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1 rounded border border-slate-200 outline-none focus:border-blue-500 bg-white" placeholder="New..." />
+                <button onClick={handleCommit} className="p-1 bg-blue-600 text-white rounded shadow-sm"><Check size={14}/></button>
+                <button onClick={() => setActiveAction(null)} className="p-1 text-slate-400"><X size={14}/></button>
+              </div>
+            )}
+            {branchesMaster.map(b => (
+              <div key={b} className="group flex items-center justify-between px-3 py-2 rounded transition-all border bg-white border-transparent text-slate-600 hover:bg-slate-50">
+                <span className="text-xs font-semibold truncate flex-1">{b}</span>
+                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                  <button onClick={() => {setActiveAction({type:'edit', level:'branch', oldValue:b}); setInputValue(b);}} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"><Edit2 size={12}/></button>
+                  <button onClick={() => handleDelete('branch', b)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-rose-600"><Trash2 size={12}/></button>
                 </div>
               </div>
             ))}

@@ -37,7 +37,8 @@ const Login = () => {
         role: (row['role'] || 'USER').trim().toUpperCase(),
         branch: row['branch'] || '',
         department: row['department'] || '',
-        pageAccess: row['Page access'] ? row['Page access'].split(',').map(s => s.trim()) : []
+        pageAccess: row['Page access'] ? row['Page access'].split(',').map(s => s.trim()) : [],
+        reportedBy: row['Reported by'] || ''   // admin this user reports to
       }));
 
       const matchedUser = users.find(

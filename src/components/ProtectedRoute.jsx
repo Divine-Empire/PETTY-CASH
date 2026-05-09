@@ -9,8 +9,9 @@ const ProtectedRoute = ({ children, allowedRoles, requiredPage }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Admin bypass (safety)
-  if (user.role?.toUpperCase() === 'ADMIN') return <>{children}</>;
+  // Super Admin bypass
+  const role = user.role?.toUpperCase();
+  if (role === 'SUPER_ADMIN') return <>{children}</>;
 
   // Role check
   if (allowedRoles && !allowedRoles.includes(user.role?.toUpperCase())) {
