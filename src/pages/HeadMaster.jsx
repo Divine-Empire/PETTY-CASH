@@ -28,7 +28,8 @@ export default function HeadMaster() {
           'Group Head': String(r['Group Head'] || r['Group Heads'] || '').trim(),
           'Expense Head': String(r['Expense Head'] || r['Expense Heads'] || '').trim(),
           'Sub Head': String(r['Sub Head'] || r['Sub Heads'] || '').trim(),
-        })).filter(r => r['Group Head'] || r['Expense Head'] || r['Sub Head']);
+          'Vendor': String(r['Vendor'] || r['Vendors'] || '').trim(),
+        })).filter(r => r['Group Head'] || r['Expense Head'] || r['Sub Head'] || r['Vendor']);
         setMasterData(formatted);
       }
     } catch { toast.error('Error loading Master data'); } finally { if (!silent) setFetching(false); }
@@ -61,6 +62,14 @@ export default function HeadMaster() {
       .filter(sh => sh.toLowerCase().includes(searchTerm.toLowerCase())).sort();
   }, [masterData, selectedGroup, selectedExpense, searchTerm]);
 
+  const vendors = useMemo(() => {
+    let base = masterData;
+    if (selectedGroup) base = base.filter(d => d['Group Head'] === selectedGroup);
+    if (selectedExpense) base = base.filter(d => d['Expense Head'] === selectedExpense);
+    return [...new Set(base.map(d => d['Vendor']).filter(Boolean))]
+      .filter(v => v.toLowerCase().includes(searchTerm.toLowerCase())).sort();
+  }, [masterData, selectedGroup, selectedExpense, searchTerm]);
+
   const callApi = async (action, data) => {
     setSaving(true);
     try {
@@ -76,14 +85,22 @@ export default function HeadMaster() {
     if (!val) return;
     try {
       if (activeAction.type === 'add') {
-        const payload = activeAction.level === 'group' ? { 'Group Head': val, 'Expense Head': '', 'Sub Head': '' } :
-                        activeAction.level === 'expense' ? { 'Group Head': selectedGroup || '', 'Expense Head': val, 'Sub Head': '' } :
-                        { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': val };
+        const payload = activeAction.level === 'group' ? { 'Group Head': val, 'Expense Head': '', 'Sub Head': '', 'Vendor': '' } :
+                        activeAction.level === 'expense' ? { 'Group Head': selectedGroup || '', 'Expense Head': val, 'Sub Head': '', 'Vendor': '' } :
+                        activeAction.level === 'sub' ? { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': val, 'Vendor': '' } :
+                        { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': '', 'Vendor': val };
         await callApi('createMaster', payload);
       } else {
         const { level, oldValue } = activeAction;
-        const oldV = level === 'group' ? { 'Group Head': oldValue } : level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': oldValue } : { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': oldValue };
-        const newV = level === 'group' ? { 'Group Head': val } : level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': val } : { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': val };
+        const oldV = level === 'group' ? { 'Group Head': oldValue } : 
+                    level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': oldValue } : 
+                    level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': oldValue } :
+                    { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendor': oldValue };
+        
+        const newV = level === 'group' ? { 'Group Head': val } : 
+                    level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': val } : 
+                    level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': val } :
+                    { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendor': val };
         await callApi('updateMaster', { level, oldValue: oldV, newValue: newV });
       }
       toast.success('Updated'); setActiveAction(null); setInputValue(''); fetchMasterData(true);
@@ -92,7 +109,10 @@ export default function HeadMaster() {
 
   const handleDelete = async (level, value) => {
     if (!window.confirm('Delete this item and all linked records?')) return;
-    const payload = level === 'group' ? { 'Group Head': value } : level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': value } : { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': value };
+    const payload = level === 'group' ? { 'Group Head': value } : 
+                   level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': value } : 
+                   level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': value } :
+                   { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendor': value };
     try { await callApi('deleteMaster', payload); toast.success('Deleted'); fetchMasterData(true); } catch {}
   };
 
@@ -124,7 +144,7 @@ export default function HeadMaster() {
       </div>
 
       {/* Columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Level 1: Groups */}
         <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[550px] shadow-sm">
@@ -138,9 +158,9 @@ export default function HeadMaster() {
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {activeAction?.level === 'group' && activeAction.type === 'add' && (
                <div className="p-2 border border-blue-200 rounded-md bg-blue-50/30 flex gap-1">
-                <input autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" placeholder="New Group..." />
-                <button onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm"><Check size={14}/></button>
-                <button onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400"><X size={14}/></button>
+                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500 disabled:opacity-50" placeholder="New Group..." />
+                <button disabled={saving} onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm disabled:opacity-50"><Check size={14}/></button>
+                <button disabled={saving} onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400 disabled:opacity-50"><X size={14}/></button>
                </div>
             )}
             {groupHeads.map(gh => (
@@ -167,9 +187,9 @@ export default function HeadMaster() {
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {activeAction?.level === 'expense' && activeAction.type === 'add' && (
               <div className="p-2 border border-blue-200 rounded-md bg-blue-50/30 flex gap-1">
-                <input autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" placeholder="New Expense..." />
-                <button onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm"><Check size={14}/></button>
-                <button onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400"><X size={14}/></button>
+                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500 disabled:opacity-50" placeholder="New Expense..." />
+                <button disabled={saving} onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm disabled:opacity-50"><Check size={14}/></button>
+                <button disabled={saving} onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400 disabled:opacity-50"><X size={14}/></button>
               </div>
             )}
             {expenseHeads.map(eh => (
@@ -196,9 +216,9 @@ export default function HeadMaster() {
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {activeAction?.level === 'sub' && activeAction.type === 'add' && (
               <div className="p-2 border border-blue-200 rounded-md bg-blue-50/30 flex gap-1">
-                <input autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500" placeholder="New Sub..." />
-                <button onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm"><Check size={14}/></button>
-                <button onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400"><X size={14}/></button>
+                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500 disabled:opacity-50" placeholder="New Sub..." />
+                <button disabled={saving} onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm disabled:opacity-50"><Check size={14}/></button>
+                <button disabled={saving} onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400 disabled:opacity-50"><X size={14}/></button>
               </div>
             )}
             {subHeads.map(sh => (
@@ -207,6 +227,35 @@ export default function HeadMaster() {
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => {setActiveAction({type:'edit', level:'sub', oldValue:sh}); setInputValue(sh);}} className="p-1 hover:bg-indigo-50 text-indigo-600 rounded"><Edit2 size={12}/></button>
                   <button onClick={() => handleDelete('sub', sh)} className="p-1 hover:bg-rose-50 text-rose-600 rounded"><Trash2 size={12}/></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Level 4: Vendors */}
+        <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[550px] shadow-sm">
+          <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+            <div className="flex items-center gap-2">
+              <User size={14} className="text-blue-600" />
+              <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Vendors</span>
+            </div>
+            <button onClick={() => { setActiveAction({type:'add', level:'vendor'}); setInputValue(''); }} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Plus size={16} /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {activeAction?.level === 'vendor' && activeAction.type === 'add' && (
+              <div className="p-2 border border-blue-200 rounded-md bg-blue-50/30 flex gap-1">
+                <input disabled={saving} autoFocus value={inputValue} onChange={e => setInputValue(e.target.value)} className="flex-1 text-xs px-2 py-1.5 rounded border border-slate-200 outline-none focus:border-blue-500 disabled:opacity-50" placeholder="New Vendor..." />
+                <button disabled={saving} onClick={handleCommit} className="p-1.5 bg-blue-600 text-white rounded shadow-sm disabled:opacity-50"><Check size={14}/></button>
+                <button disabled={saving} onClick={() => setActiveAction(null)} className="p-1.5 text-slate-400 disabled:opacity-50"><X size={14}/></button>
+              </div>
+            )}
+            {vendors.map(v => (
+              <div key={v} className="group flex items-center justify-between px-4 py-3 rounded-md transition-all hover:bg-slate-50 text-slate-700 border border-transparent">
+                <span className="text-xs font-bold">{v}</span>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => {setActiveAction({type:'edit', level:'vendor', oldValue:v}); setInputValue(v);}} className="p-1 hover:bg-blue-50 text-blue-600 rounded"><Edit2 size={12}/></button>
+                  <button onClick={() => handleDelete('vendor', v)} className="p-1 hover:bg-rose-50 text-rose-600 rounded"><Trash2 size={12}/></button>
                 </div>
               </div>
             ))}

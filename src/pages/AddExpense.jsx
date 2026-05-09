@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
   Plus, Search, X, Eye, Calendar, Check, ArrowUpDown, TrendingUp, TrendingDown, Trash2, Database, Save, RefreshCcw, Filter, User, Building2, Upload, FileText, Paperclip, Loader2
@@ -83,6 +84,10 @@ export default function AddExpense() {
     if (!expenseForm.expenseHead) return [];
     return [...new Set(masterData.filter(d => (d['Expense Head'] || d['Expense Heads']) === expenseForm.expenseHead).map(d => d['Sub Head'] || d['Sub Heads']).filter(Boolean))].sort();
   }, [masterData, expenseForm.expenseHead]);
+  
+  const vendorSuggestions = useMemo(() => {
+    return [...new Set(masterData.map(d => d['Vendor'] || d['Vendors']).filter(Boolean))].sort();
+  }, [masterData]);
 
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -290,7 +295,7 @@ export default function AddExpense() {
           </select>
           <input type="date" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} className="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-md px-3 py-1.5 outline-none" />
           <input type="date" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} className="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-md px-3 py-1.5 outline-none" />
-          <button onClick={fetchExpenses} className="p-2 text-slate-500 hover:text-indigo-600 transition-colors">
+          <button onClick={fetchExpenses} className="p-2 text-slate-500 hover:text-blue-600 transition-colors">
             <RefreshCcw size={16} />
           </button>
         </div>
@@ -404,8 +409,8 @@ export default function AddExpense() {
       </div>
 
       {/* Form Modal */}
-      {showFormModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+      {showFormModal && createPortal(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-md flex items-center justify-center z-[999] p-4 animate-in fade-in duration-300">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col overflow-hidden border border-slate-200">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
               <h2 className="font-bold text-slate-900">{activeType === 'RECEIVE' ? 'Inflow Registration' : 'Expense Registration'}</h2>
@@ -417,79 +422,99 @@ export default function AddExpense() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Date</label>
-                    <input type="date" value={expenseForm.date} onChange={e=>setExpenseForm({...expenseForm, date:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                    <input disabled={submitting} type="date" value={expenseForm.date} onChange={e=>setExpenseForm({...expenseForm, date:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Payment Mode</label>
-                    <select value={expenseForm.paymentMode} onChange={e=>setExpenseForm({...expenseForm, paymentMode:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <select disabled={submitting} value={expenseForm.paymentMode} onChange={e=>setExpenseForm({...expenseForm, paymentMode:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
                       {expenseModes.map(m=><option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Group Head</label>
-                    <select value={expenseForm.groupHead} onChange={e=>setExpenseForm({...expenseForm, groupHead:e.target.value, expenseHead:'', subHead:''})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <select disabled={submitting} value={expenseForm.groupHead} onChange={e=>setExpenseForm({...expenseForm, groupHead:e.target.value, expenseHead:'', subHead:''})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
                       <option value="">Select Group</option>
                       {groupHeads.map(g=><option key={g} value={g}>{g}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Expense Head</label>
-                    <select value={expenseForm.expenseHead} onChange={e=>setExpenseForm({...expenseForm, expenseHead:e.target.value, subHead:''})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <select disabled={submitting} value={expenseForm.expenseHead} onChange={e=>setExpenseForm({...expenseForm, expenseHead:e.target.value, subHead:''})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
                       <option value="">Select Expense</option>
                       {expenseHeads.map(eh=><option key={eh} value={eh}>{eh}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Sub Head</label>
-                    <select value={expenseForm.subHead} onChange={e=>setExpenseForm({...expenseForm, subHead:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <select disabled={submitting} value={expenseForm.subHead} onChange={e=>setExpenseForm({...expenseForm, subHead:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
                       <option value="">Select Sub Head</option>
                       {subHeads.map(sh=><option key={sh} value={sh}>{sh}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Branch</label>
-                    <select value={expenseForm.branch} onChange={e=>setExpenseForm({...expenseForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <select disabled={submitting} value={expenseForm.branch} onChange={e=>setExpenseForm({...expenseForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
                       {branches.map(b=><option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (₹)</label>
-                    <input type="number" value={expenseForm.amount} onChange={e=>setExpenseForm({...expenseForm, amount:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-blue-500 outline-none" placeholder="0.00" />
+                    <input disabled={submitting} type="number" value={expenseForm.amount} onChange={e=>setExpenseForm({...expenseForm, amount:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" placeholder="0.00" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Paid To / Vendor</label>
-                    <input type="text" value={expenseForm.paidTo} onChange={e=>setExpenseForm({...expenseForm, paidTo:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" placeholder="Name" />
+                    <input 
+                      disabled={submitting} 
+                      type="text" 
+                      list="vendor-list"
+                      value={expenseForm.paidTo} 
+                      onChange={e=>setExpenseForm({...expenseForm, paidTo:e.target.value})} 
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" 
+                      placeholder="Select or enter name" 
+                    />
+                    <datalist id="vendor-list">
+                      {vendorSuggestions.map(v => <option key={v} value={v} />)}
+                    </datalist>
                   </div>
                   <div className="md:col-span-2 space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
-                    <textarea rows="2" value={expenseForm.description} onChange={e=>setExpenseForm({...expenseForm, description:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" placeholder="Details..." />
+                    <textarea disabled={submitting} rows="2" value={expenseForm.description} onChange={e=>setExpenseForm({...expenseForm, description:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none disabled:bg-slate-100 disabled:text-slate-400" placeholder="Details..." />
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Value Date</label>
-                    <input type="date" value={receiveForm.valueDate} onChange={e=>setReceiveForm({...receiveForm, valueDate:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                    <input disabled={submitting} type="date" value={receiveForm.valueDate} onChange={e=>setReceiveForm({...receiveForm, valueDate:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Inflow Type</label>
-                    <select value={receiveForm.transactionType} onChange={e=>setReceiveForm({...receiveForm, transactionType:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <select disabled={submitting} value={receiveForm.transactionType} onChange={e=>setReceiveForm({...receiveForm, transactionType:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
                       {receiveModes.map(m=><option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (₹)</label>
-                    <input type="number" value={receiveForm.amount} onChange={e=>setReceiveForm({...receiveForm, amount:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-blue-500 outline-none" placeholder="0.00" />
+                    <input disabled={submitting} type="number" value={receiveForm.amount} onChange={e=>setReceiveForm({...receiveForm, amount:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" placeholder="0.00" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Branch</label>
-                    <select value={receiveForm.branch} onChange={e=>setReceiveForm({...receiveForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                    <select disabled={submitting} value={receiveForm.branch} onChange={e=>setReceiveForm({...receiveForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400">
                       {branches.map(b=><option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
                   <div className="md:col-span-2 space-y-1">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Received From / Notes</label>
-                    <textarea rows="2" value={receiveForm.descriptionMemo} onChange={e=>setReceiveForm({...receiveForm, descriptionMemo:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" placeholder="Details..." />
+                    <input 
+                      disabled={submitting} 
+                      type="text" 
+                      list="vendor-list"
+                      value={receiveForm.receivedFrom} 
+                      onChange={e=>setReceiveForm({...receiveForm, receivedFrom:e.target.value})} 
+                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none disabled:bg-slate-100 disabled:text-slate-400" 
+                      placeholder="Select or enter name" 
+                    />
+                    <textarea disabled={submitting} rows="2" value={receiveForm.descriptionMemo} onChange={e=>setReceiveForm({...receiveForm, descriptionMemo:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none disabled:bg-slate-100 disabled:text-slate-400 mt-3" placeholder="Detailed notes..." />
                   </div>
                 </div>
               )}
@@ -498,13 +523,13 @@ export default function AddExpense() {
               <div className="space-y-2 pt-2 border-t border-slate-100">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Supporting Documentation (Max 5)</label>
                 <div 
-                  onClick={() => selectedFiles.length < 5 && fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition-all cursor-pointer ${selectedFiles.length >= 5 ? 'bg-slate-50 border-slate-200 opacity-50 cursor-not-allowed' : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50/30'}`}
+                  onClick={() => !submitting && selectedFiles.length < 5 && fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition-all cursor-pointer ${submitting || selectedFiles.length >= 5 ? 'bg-slate-50 border-slate-200 opacity-50 cursor-not-allowed' : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50/30'}`}
                 >
                   <Upload size={24} className="text-slate-400 mb-2" />
                   <span className="text-xs font-bold text-slate-600">Click to upload receipts/proofs</span>
                   <span className="text-[9px] text-slate-400 mt-1">{selectedFiles.length} of 5 selected</span>
-                  <input type="file" multiple ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,application/pdf" />
+                  <input type="file" multiple ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,application/pdf" disabled={submitting} />
                 </div>
                 {selectedFiles.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
@@ -514,7 +539,7 @@ export default function AddExpense() {
                           <Paperclip size={10} className="text-slate-400 shrink-0" />
                           <span className="text-[10px] font-medium text-slate-600 truncate">{f.name}</span>
                         </div>
-                        <button onClick={() => removeFile(i)} className="text-rose-500 hover:bg-rose-50 p-1 rounded"><X size={12}/></button>
+                        <button disabled={submitting} onClick={() => removeFile(i)} className="text-rose-500 hover:bg-rose-50 p-1 rounded disabled:opacity-30"><X size={12}/></button>
                       </div>
                     ))}
                   </div>
@@ -523,17 +548,18 @@ export default function AddExpense() {
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button onClick={addToQueue} className="flex-1 bg-blue-600 text-white py-2.5 rounded font-bold text-sm hover:bg-blue-700 shadow-sm transition-all active:scale-95">Add to Session ({drafts.length})</button>
+              <button disabled={submitting} onClick={addToQueue} className="flex-1 bg-blue-600 text-white py-2.5 rounded font-bold text-sm hover:bg-blue-700 shadow-sm transition-all active:scale-95 disabled:opacity-50">Add to Session ({drafts.length})</button>
               <button onClick={commitAll} disabled={submitting || drafts.length === 0} className="px-8 bg-slate-900 text-white py-2.5 rounded font-bold text-sm hover:bg-slate-800 disabled:opacity-30 transition-all">Submit All</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
 
     {/* Full Screen Processing Overlay */}
-    {submitting && (
-      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[300] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
+    {submitting && createPortal(
+      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[1000] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
         <div className="relative mb-8">
            <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
            <Loader2 size={64} className="animate-spin text-blue-400 relative z-10" strokeWidth={1.5} />
@@ -544,7 +570,8 @@ export default function AddExpense() {
            <div className="h-full bg-blue-500 animate-progress-indeterminate"></div>
         </div>
         <p className="mt-8 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Transaction Protocol Active</p>
-      </div>
+      </div>,
+      document.body
     )}
     </>
   );

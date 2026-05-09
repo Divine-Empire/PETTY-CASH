@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import toast from 'react-hot-toast';
 import {
   Plus, Trash2, Wallet, ArrowUpRight, ArrowDownRight, RotateCcw,
@@ -14,6 +15,7 @@ export default function PettyCash() {
   const [transactions, setTransactions] = useState([]);
   const [fetching, setFetching] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const createDefaultEntry = () => ({
     date: getTodayDate(),
@@ -193,6 +195,7 @@ export default function PettyCash() {
     }
 
     try {
+      setSubmitting(true);
       toast.loading('Processing batch submission...', { id: 'save-toast' });
       const results = await Promise.all(formEntries.map(async (entry) => {
         const base64Files = await Promise.all(
@@ -230,6 +233,8 @@ export default function PettyCash() {
       }
     } catch (err) {
       toast.error('Network error during batch submission', { id: 'save-toast' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -431,193 +436,204 @@ export default function PettyCash() {
             <h2 className="text-base md:text-2xl lg:text-3xl font-black text-amber-600 tracking-tight">{formatCurrency(cashReturned).replace('INR', '₹')}</h2>
           </div>
         </div>
-      </div>
-
-      {/* Form Container */}
-      <div className={`${showForm ? 'block' : 'hidden'} ${
-        showForm 
-          ? 'fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md p-4 md:p-0 overflow-y-auto md:static md:bg-transparent md:backdrop-blur-none md:z-auto md:overflow-visible animate-in fade-in duration-300' 
-          : ''
-      }`}>
-        <div className="min-h-full flex flex-col md:block py-10 md:py-0">
-          {/* Mobile Header for Form */}
-          <div className="flex items-center justify-between mb-4 md:hidden px-2">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-600 rounded-xl text-white shadow-lg">
-                <Plus size={20} />
+          {/* Form Container */}
+      {showForm && createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden border border-slate-100">
+            {/* Modal Header */}
+            <div className="px-10 py-8 border-b border-slate-50 flex justify-between items-center bg-white">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Batch Ledger Entry</h2>
+                <p className="text-slate-400 text-xs font-semibold uppercase tracking-widest mt-1">Session Management Protocol</p>
               </div>
-              <h2 className="text-xl font-bold text-white">New Transaction</h2>
+              <button 
+                onClick={() => {
+                  setShowForm(false);
+                  setFormEntries([createDefaultEntry()]);
+                }}
+                className="p-3 bg-slate-50 text-slate-400 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all active:scale-90"
+              >
+                <X size={24} strokeWidth={2.5} />
+              </button>
             </div>
-            <button 
-              onClick={() => {
-                setShowForm(false);
-                setFormEntries([createDefaultEntry()]);
-              }} 
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white backdrop-blur-sm transition-colors"
-            >
-              <X size={24} />
-            </button>
-          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
-          {formEntries.map((entry, index) => (
-            <div key={index} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 md:p-10 space-y-8 relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                    <span className="text-sm font-semibold">#{index + 1}</span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-slate-900">Transaction Entry</h3>
-                </div>
-                {formEntries.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeFormEntry(index)}
-                    className="p-3 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-colors"
-                    title="Remove this form"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-400 ml-1">Value Date</label>
-                  <input
-                    type="date"
-                    value={entry.date}
-                    onChange={(e) => updateEntry(index, 'date', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-400 ml-1">Transaction Type</label>
-                  <select
-                    value={entry.type}
-                    onChange={(e) => updateEntry(index, 'type', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer shadow-sm"
-                    required
-                  >
-                    <option value="Cash Received">Cash Received (+)</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-400 ml-1">Amount (INR)</label>
-                  <div className="relative group flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => updateEntry(index, 'amount', Math.max(0, (parseFloat(entry.amount) || 0) - 100))}
-                      className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-90"
-                    >
-                      <Minus size={20} strokeWidth={3} />
-                    </button>
-                    <div className="relative flex-1">
-                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">₹</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={entry.amount}
-                        onChange={(e) => updateEntry(index, 'amount', e.target.value)}
-                        placeholder="0.00"
-                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-10 pr-5 py-4 text-lg font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
-                        required
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => updateEntry(index, 'amount', (parseFloat(entry.amount) || 0) + 100)}
-                      className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-emerald-50 hover:text-emerald-600 transition-all active:scale-90"
-                    >
-                      <Plus size={20} strokeWidth={3} />
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-400 ml-1">Description / Memo</label>
-                  <input
-                    type="text"
-                    value={entry.description}
-                    onChange={(e) => updateEntry(index, 'description', e.target.value)}
-                    placeholder="Nature of transaction..."
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
-                    required
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-3">
-                  <label className="text-xs font-semibold text-slate-400 ml-1">Attachments (Max 5 Documents)</label>
-                  <div className="flex flex-wrap gap-4">
-                    <label className="cursor-pointer group flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-slate-100 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all relative overflow-hidden">
-                      <input
-                        type="file"
-                        multiple
-                        onChange={(e) => {
-                          const selected = Array.from(e.target.files);
-                          if (entry.attachments.length + selected.length > 5) {
-                            toast.error('Max 5 documents per form');
-                            return;
-                          }
-                          updateEntry(index, 'attachments', [...entry.attachments, ...selected]);
-                        }}
-                        className="hidden"
-                        accept="image/*,.pdf,.doc,.docx"
-                      />
-                      <FileUp size={24} className="text-slate-400 group-hover:text-blue-600 mb-2 transition-colors" />
-                      <span className="text-xs font-semibold text-slate-400 group-hover:text-blue-600">Upload</span>
-                    </label>
-                    {entry.attachments.map((file, fIdx) => (
-                      <div key={fIdx} className="relative w-32 h-32 bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center justify-center text-center gap-2 group">
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-10 space-y-12">
+              <form onSubmit={handleSubmit} className="space-y-10">
+                {formEntries.map((entry, index) => (
+                  <div key={index} className="relative bg-slate-50/50 rounded-[2rem] p-8 border border-slate-100 group transition-all hover:bg-white hover:shadow-xl hover:shadow-slate-200/50">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                          <span className="text-sm font-semibold">#{index + 1}</span>
+                        </div>
+                        <h3 className="text-xl font-semibold text-slate-900">Transaction Entry</h3>
+                      </div>
+                      {formEntries.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => {
-                            const updated = [...entry.attachments];
-                            updated.splice(fIdx, 1);
-                            updateEntry(index, 'attachments', updated);
-                          }}
-                          className="absolute -top-2 -right-2 p-1.5 bg-rose-500 text-white rounded-full shadow-lg hover:bg-rose-600 transition-colors z-10"
+                          onClick={() => removeFormEntry(index)}
+                          className="p-3 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-colors"
+                          title="Remove this form"
                         >
-                          <X size={12} strokeWidth={3} />
+                          <Trash2 size={20} />
                         </button>
-                        <div className="p-2.5 bg-white rounded-xl shadow-sm">
-                          <Paperclip size={16} className="text-blue-500" />
-                        </div>
-                        <span className="text-[9px] font-semibold text-slate-600 truncate w-full px-2">{file.name}</span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-400 ml-1">Value Date</label>
+                        <input
+                          disabled={submitting}
+                          type="date"
+                          value={entry.date}
+                          onChange={(e) => updateEntry(index, 'date', e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm disabled:opacity-50"
+                          required
+                        />
                       </div>
-                    ))}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-400 ml-1">Transaction Type</label>
+                        <select
+                          disabled={submitting}
+                          value={entry.type}
+                          onChange={(e) => updateEntry(index, 'type', e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer shadow-sm disabled:opacity-50"
+                          required
+                        >
+                          <option value="Cash Received">Cash Received (+)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-400 ml-1">Amount (INR)</label>
+                        <div className="relative group flex items-center gap-2">
+                          <button
+                            disabled={submitting}
+                            type="button"
+                            onClick={() => updateEntry(index, 'amount', Math.max(0, (parseFloat(entry.amount) || 0) - 100))}
+                            className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-90 disabled:opacity-50"
+                          >
+                            <Minus size={20} strokeWidth={3} />
+                          </button>
+                          <div className="relative flex-1">
+                            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">₹</span>
+                            <input
+                              disabled={submitting}
+                              type="number"
+                              step="0.01"
+                              value={entry.amount}
+                              onChange={(e) => updateEntry(index, 'amount', e.target.value)}
+                              placeholder="0.00"
+                              className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-10 pr-5 py-4 text-lg font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm disabled:opacity-50"
+                              required
+                            />
+                          </div>
+                          <button
+                            disabled={submitting}
+                            type="button"
+                            onClick={() => updateEntry(index, 'amount', (parseFloat(entry.amount) || 0) + 100)}
+                            className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-emerald-50 hover:text-emerald-600 transition-all active:scale-90 disabled:opacity-50"
+                          >
+                            <Plus size={20} strokeWidth={3} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-400 ml-1">Description / Memo</label>
+                        <input
+                          disabled={submitting}
+                          type="text"
+                          value={entry.description}
+                          onChange={(e) => updateEntry(index, 'description', e.target.value)}
+                          placeholder="Nature of transaction..."
+                          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm disabled:opacity-50"
+                          required
+                        />
+                      </div>
+                      <div className="md:col-span-2 space-y-3">
+                        <label className="text-xs font-semibold text-slate-400 ml-1">Attachments (Max 5 Documents)</label>
+                        <div className="flex flex-wrap gap-4">
+                          <label className={`cursor-pointer group flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-slate-100 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all relative overflow-hidden ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <input
+                              disabled={submitting}
+                              type="file"
+                              multiple
+                              onChange={(e) => {
+                                const selected = Array.from(e.target.files);
+                                if (entry.attachments.length + selected.length > 5) {
+                                  toast.error('Max 5 documents per form');
+                                  return;
+                                }
+                                updateEntry(index, 'attachments', [...entry.attachments, ...selected]);
+                              }}
+                              className="hidden"
+                              accept="image/*,.pdf,.doc,.docx"
+                            />
+                            <FileUp size={24} className="text-slate-400 group-hover:text-blue-600 mb-2 transition-colors" />
+                            <span className="text-xs font-semibold text-slate-400 group-hover:text-blue-600">Upload</span>
+                          </label>
+                          {entry.attachments.map((file, fIdx) => (
+                            <div key={fIdx} className="relative w-32 h-32 bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center justify-center text-center gap-2 group">
+                              <button
+                                disabled={submitting}
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...entry.attachments];
+                                  updated.splice(fIdx, 1);
+                                  updateEntry(index, 'attachments', updated);
+                                }}
+                                className="absolute -top-2 -right-2 p-1.5 bg-rose-500 text-white rounded-full shadow-lg hover:bg-rose-600 transition-colors z-10 disabled:opacity-50"
+                              >
+                                <X size={12} strokeWidth={3} />
+                              </button>
+                              <div className="p-2.5 bg-white rounded-xl shadow-sm">
+                                <Paperclip size={16} className="text-blue-500" />
+                              </div>
+                              <span className="text-[9px] font-semibold text-slate-600 truncate w-full px-2">{file.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                ))}
+
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <button
+                    disabled={submitting}
+                    type="button"
+                    onClick={addFormEntry}
+                    className="flex-1 bg-white border-2 border-dashed border-blue-200 text-blue-600 px-8 py-4 rounded-2xl text-sm font-semibold hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Plus size={20} strokeWidth={3} />
+                    Add Another Transaction
+                  </button>
+                  <button
+                    disabled={submitting}
+                    type="submit"
+                    className="flex-1 bg-slate-800 text-white px-8 py-4 rounded-2xl text-sm font-semibold hover:bg-slate-800 transition-all active:scale-95 shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    Commit All to Ledger ({formEntries.length})
+                  </button>
+                  <button
+                    disabled={submitting}
+                    type="button"
+                    onClick={() => {
+                      setShowForm(false);
+                      setFormEntries([createDefaultEntry()]);
+                    }}
+                    className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl text-sm font-semibold hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 border border-slate-100 disabled:opacity-50"
+                  >
+                    Discard
+                  </button>
                 </div>
-              </div>
+              </form>
             </div>
-          ))}
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <button
-              type="button"
-              onClick={addFormEntry}
-              className="flex-1 bg-white border-2 border-dashed border-blue-200 text-blue-600 px-8 py-4 rounded-2xl text-sm font-semibold hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-            >
-              <Plus size={20} strokeWidth={3} />
-              Add Another Transaction
-            </button>
-            <button
-              type="submit"
-              className="flex-1 bg-slate-800 text-white px-8 py-4 rounded-2xl text-sm font-semibold hover:bg-slate-800 transition-all active:scale-95 shadow-sm flex items-center justify-center gap-2"
-            >
-              Commit All to Ledger ({formEntries.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(false);
-                setFormEntries([createDefaultEntry()]);
-              }}
-              className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl text-sm font-semibold hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 border border-slate-100"
-            >
-              Discard
-            </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>,
+        document.body
+      )}
 
       {/* Main Table */}
       <div className="bg-white rounded-2xl md:border border-slate-100 shadow-sm overflow-hidden min-h-[400px] flex flex-col">
@@ -883,4 +899,6 @@ export default function PettyCash() {
       )}
     </div>
   );
-}
+};
+
+export default PettyCash;

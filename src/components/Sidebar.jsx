@@ -80,7 +80,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                 <img src={logo} alt="Logo" className="w-full h-full object-contain" />
               </div>
               <div className={`flex flex-col animate-in fade-in slide-in-from-left-4 duration-500 overflow-hidden ${isCollapsed ? 'lg:hidden' : ''}`}>
-                <span className="text-2xl font-semibold text-slate-900  leading-none truncate">PeteCash</span>
+                <span className="text-2xl font-semibold text-slate-900  leading-none truncate">Petty Cash</span>
                 <span className="text-[10px] font-semibold text-blue-600   mt-2 truncate">Enterprise</span>
               </div>
             </div>

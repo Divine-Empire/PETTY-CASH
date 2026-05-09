@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
-  Check, X, Pause, Trash2, RotateCcw, ShieldCheck, ShieldAlert, AlertTriangle, RefreshCcw, User, Building2
+  Check, X, Pause, Trash2, RotateCcw, ShieldCheck, ShieldAlert, AlertTriangle, RefreshCcw, User, Building2, Paperclip, FileText, Image as ImageIcon
 } from 'lucide-react';
 import { formatCurrency, formatDate, getGoogleSheetTimestamp } from '../utils/helpers';
 
@@ -143,6 +143,7 @@ export default function ApprovalPanel() {
                   <th className="px-6 py-3 font-bold">Paid To / Description</th>
                   <th className="px-6 py-3 font-bold">By (User / Branch)</th>
                   <th className="px-6 py-3 font-bold text-right">Amount / Mode</th>
+                  <th className="px-6 py-3 font-bold text-center">Docs</th>
                   {(expenseTab === 'history' || deleteTab === 'deleted') ? (
                     <th className="px-6 py-3 font-bold text-center">Status</th>
                   ) : (
@@ -158,7 +159,7 @@ export default function ApprovalPanel() {
                   const isHistory = (expenseTab === 'history' || deleteTab === 'deleted');
                   return (
                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 font-bold text-indigo-700 text-xs">{voucher}</td>
+                      <td className="px-6 py-4 font-bold text-blue-700 text-xs">{voucher}</td>
                       <td className="px-6 py-4 text-slate-500">{formatDate(r.Date)}</td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
@@ -182,6 +183,29 @@ export default function ApprovalPanel() {
                         <div className="flex flex-col items-end">
                           <span className="font-black text-slate-900">{formatCurrency(r['Amount (INR)'])}</span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase">{r['Payment mode']}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center items-center gap-1.5">
+                          {String(r['Bill / Receipt'] || '').split(',').filter(Boolean).map((link, lIdx) => {
+                            const isPdf = link.toLowerCase().includes('.pdf');
+                            const isImage = /\.(jpg|jpeg|png|webp|gif)$/i.test(link);
+                            return (
+                              <a 
+                                key={lIdx} 
+                                href={link} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="group relative p-1.5 bg-slate-50 border border-slate-100 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all active:scale-90"
+                                title="View Document"
+                              >
+                                {isPdf ? <FileText size={14} className="text-rose-500" /> : 
+                                 isImage ? <ImageIcon size={14} className="text-emerald-500" /> : 
+                                 <Paperclip size={14} className="text-blue-500" />}
+                              </a>
+                            );
+                          })}
+                          {!String(r['Bill / Receipt'] || '').trim() && <span className="text-[10px] text-slate-300 italic">None</span>}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -220,10 +244,10 @@ export default function ApprovalPanel() {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-slate-500">Provide a remark for this action. This will be visible in the audit history.</p>
-              <textarea value={remark} onChange={e => setRemark(e.target.value)} placeholder="Enter remark..." className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-indigo-500 text-sm font-medium resize-none" rows="3" />
+              <textarea value={remark} onChange={e => setRemark(e.target.value)} placeholder="Enter remark..." className="w-full border border-slate-300 rounded px-3 py-2 outline-none focus:border-blue-500 text-sm font-medium resize-none" rows="3" />
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button onClick={() => handleAction(selectedRecord, actionType)} className={`flex-1 text-white py-2 rounded font-bold text-sm transition-all ${actionType==='REJECT'||actionType==='DELETED'?'bg-rose-600 hover:bg-rose-700':'bg-indigo-600 hover:bg-indigo-700'}`}>Confirm Action</button>
+              <button onClick={() => handleAction(selectedRecord, actionType)} className={`flex-1 text-white py-2 rounded font-bold text-sm transition-all ${actionType==='REJECT'||actionType==='DELETED'?'bg-rose-600 hover:bg-rose-700':'bg-blue-600 hover:bg-blue-700'}`}>Confirm Action</button>
               <button onClick={() => setShowModal(false)} className="px-6 bg-white border border-slate-300 text-slate-500 py-2 rounded font-bold text-sm hover:bg-slate-50">Cancel</button>
             </div>
           </div>

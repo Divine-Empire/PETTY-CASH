@@ -456,8 +456,8 @@ function handleMasterRequests(payload) {
   var sheet = spreadsheet.getSheetByName(sheetName);
   if (!sheet) {
     sheet = spreadsheet.insertSheet(sheetName);
-    sheet.appendRow(['Group Head', 'Expense Head', 'Sub Head']);
-    sheet.getRange('A1:C1').setFontWeight('bold');
+    sheet.appendRow(['Group Head', 'Expense Head', 'Sub Head', 'Vendor']);
+    sheet.getRange('A1:D1').setFontWeight('bold');
     sheet.setFrozenRows(1);
   }
 
@@ -486,14 +486,15 @@ function handleMasterRequests(payload) {
       var groupHead = data['Group Head'] || '';
       var expenseHead = data['Expense Head'] || '';
       var subHead = data['Sub Head'] || '';
+      var vendor = data['Vendor'] || '';
 
       var values = sheet.getDataRange().getValues();
       var isDuplicate = values.slice(1).some(function(row) {
-        return row[0] === groupHead && row[1] === expenseHead && row[2] === subHead;
+        return row[0] === groupHead && row[1] === expenseHead && row[2] === subHead && row[3] === vendor;
       });
 
       if (!isDuplicate) {
-        sheet.appendRow([groupHead, expenseHead, subHead]);
+        sheet.appendRow([groupHead, expenseHead, subHead, vendor]);
       }
       return { success: true, message: 'Added successfully' };
     }
@@ -532,7 +533,7 @@ function handleMasterRequests(payload) {
         }
 
         if (shouldUpdate) {
-          sheet.getRange(i + 1, 1, 1, 3).setValues([row]);
+          sheet.getRange(i + 1, 1, 1, 4).setValues([row]);
           updatedCount++;
         }
       }

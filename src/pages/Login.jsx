@@ -171,7 +171,7 @@ const Login = () => {
       {/* Footer */}
       <div className="py-8 text-center relative z-10">
         <p className="text-[10px] font-semibold text-slate-400  tracking-[0.3em]">
-          Powered By Botivate <span className="mx-2 text-slate-200">|</span> v4.0.1
+          Powered By Ace Mail <span className="mx-2 text-slate-200">|</span> v4.0.1
         </p>
       </div>
     </div>

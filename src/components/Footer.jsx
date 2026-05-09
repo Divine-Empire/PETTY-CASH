@@ -37,7 +37,7 @@ const Footer = ({ isCollapsed }) => {
                                 to={item.path}
                                 className={({ isActive }) => `
                                     flex flex-col items-center px-1 py-1 rounded-2xl min-w-[70px] transition-all duration-300
-                                    ${isActive ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50'}
+                                    ${isActive ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400 hover:text-blue-600 hover:bg-slate-50'}
                                 `}
                             >
                                 <item.icon size={18} className={`mb-1 transition-transform duration-300 ${location.pathname === item.path ? 'scale-110' : ''}`} />
@@ -51,12 +51,12 @@ const Footer = ({ isCollapsed }) => {
                 <div className="py-2.5 flex justify-center items-center">
                     <p className="text-[10px] font-semibold text-slate-300  ">
                         Powered By <a 
-                            href="https://www.botivate.in" 
+                            href="#" 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-slate-400 hover:text-indigo-600 font-semibold transition-colors"
+                            className="text-slate-400 hover:text-blue-600 font-semibold transition-colors"
                         >
-                            Botivate
+                            Ace Mail
                         </a>
                     </p>
                 </div>
