@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/authStore';
+import logo from '../Assets/logo.png';
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
 
 const Login = () => {
@@ -70,7 +71,7 @@ const Login = () => {
     <div className="min-h-screen w-full flex flex-col relative overflow-hidden bg-slate-50 font-sans">
       {/* Decorative Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-100 rounded-full blur-[100px] opacity-60"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-100 rounded-full blur-[100px] opacity-60"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-100 rounded-full blur-[100px] opacity-60"></div>
       <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none" 
            style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
 
@@ -82,8 +83,8 @@ const Login = () => {
             
             {/* Header Section */}
             <div className="text-center space-y-3 relative">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 shadow-sm shadow-blue-200 mb-4 transform hover:rotate-3 transition-transform duration-300">
-                <Lock className="text-white w-7 h-7" />
+              <div className="inline-flex items-center justify-center w-20 h-20 mb-4 transform hover:scale-110 transition-transform duration-300">
+                <img src={logo} alt="Logo" className="w-full h-full object-contain" />
               </div>
               <h1 className="text-3xl font-semibold text-slate-900 ">
                 Petty <span className="text-blue-600">Cash</span>

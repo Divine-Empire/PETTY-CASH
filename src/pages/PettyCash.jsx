@@ -273,7 +273,7 @@ export default function PettyCash() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 px-4 md:px-0 no-print">
         <div>
-          <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-600 font-semibold text-xs px-3.5 py-1.5 rounded-full mb-3 shadow-sm">
+          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-600 font-semibold text-xs px-3.5 py-1.5 rounded-full mb-3 shadow-sm">
             <Wallet size={12} />
             <span>Liquid Capital Tracker</span>
           </div>
@@ -284,9 +284,9 @@ export default function PettyCash() {
         <div className="flex items-center gap-3 w-full md:w-auto">
           <button
             onClick={handlePrint}
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2.5 bg-white border border-slate-100 text-slate-700 px-6 py-4 rounded-2xl text-sm font-semibold shadow-sm hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50 transition-all active:scale-95 group whitespace-nowrap no-print"
+            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2.5 bg-white border border-slate-100 text-slate-700 px-6 py-4 rounded-2xl text-sm font-semibold shadow-sm hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-all active:scale-95 group whitespace-nowrap no-print"
           >
-            <Printer size={18} className="text-indigo-600" />
+            <Printer size={18} className="text-blue-600" />
             <span>Print Ledger</span>
           </button>
           <button
@@ -316,13 +316,13 @@ export default function PettyCash() {
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm mx-4 md:mx-0 overflow-hidden no-print">
         <div className="p-3.5 md:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 md:gap-6">
           <div className="w-full lg:max-w-md relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-600 transition-colors" size={18} />
             <input
               type="text"
               placeholder="Search description or amount..."
               value={filters.searchQuery}
               onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl pl-11 md:pl-12 pr-4 py-2.5 md:py-3.5 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm font-semibold text-slate-700 transition-all"
+              className="w-full bg-slate-50 border border-slate-100 rounded-xl md:rounded-2xl pl-11 md:pl-12 pr-4 py-2.5 md:py-3.5 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none text-sm font-semibold text-slate-700 transition-all"
             />
           </div>
           <div className="hidden lg:block w-px h-8 bg-slate-100" />
@@ -443,7 +443,7 @@ export default function PettyCash() {
           {/* Mobile Header for Form */}
           <div className="flex items-center justify-between mb-4 md:hidden px-2">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-lg">
+              <div className="p-2 bg-blue-600 rounded-xl text-white shadow-lg">
                 <Plus size={20} />
               </div>
               <h2 className="text-xl font-bold text-white">New Transaction</h2>
@@ -464,7 +464,7 @@ export default function PettyCash() {
             <div key={index} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 md:p-10 space-y-8 relative overflow-hidden">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
                     <span className="text-sm font-semibold">#{index + 1}</span>
                   </div>
                   <h3 className="text-xl font-semibold text-slate-900">Transaction Entry</h3>
@@ -487,7 +487,7 @@ export default function PettyCash() {
                     type="date"
                     value={entry.date}
                     onChange={(e) => updateEntry(index, 'date', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                     required
                   />
                 </div>
@@ -496,7 +496,7 @@ export default function PettyCash() {
                   <select
                     value={entry.type}
                     onChange={(e) => updateEntry(index, 'type', e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all appearance-none cursor-pointer shadow-sm"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all appearance-none cursor-pointer shadow-sm"
                     required
                   >
                     <option value="Cash Received">Cash Received (+)</option>
@@ -520,7 +520,7 @@ export default function PettyCash() {
                         value={entry.amount}
                         onChange={(e) => updateEntry(index, 'amount', e.target.value)}
                         placeholder="0.00"
-                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-10 pr-5 py-4 text-lg font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm"
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-10 pr-5 py-4 text-lg font-semibold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                         required
                       />
                     </div>
@@ -540,14 +540,14 @@ export default function PettyCash() {
                     value={entry.description}
                     onChange={(e) => updateEntry(index, 'description', e.target.value)}
                     placeholder="Nature of transaction..."
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all shadow-sm"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm"
                     required
                   />
                 </div>
                 <div className="md:col-span-2 space-y-3">
                   <label className="text-xs font-semibold text-slate-400 ml-1">Attachments (Max 5 Documents)</label>
                   <div className="flex flex-wrap gap-4">
-                    <label className="cursor-pointer group flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-slate-100 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition-all relative overflow-hidden">
+                    <label className="cursor-pointer group flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-slate-100 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all relative overflow-hidden">
                       <input
                         type="file"
                         multiple
@@ -562,8 +562,8 @@ export default function PettyCash() {
                         className="hidden"
                         accept="image/*,.pdf,.doc,.docx"
                       />
-                      <FileUp size={24} className="text-slate-400 group-hover:text-indigo-600 mb-2 transition-colors" />
-                      <span className="text-xs font-semibold text-slate-400 group-hover:text-indigo-600">Upload</span>
+                      <FileUp size={24} className="text-slate-400 group-hover:text-blue-600 mb-2 transition-colors" />
+                      <span className="text-xs font-semibold text-slate-400 group-hover:text-blue-600">Upload</span>
                     </label>
                     {entry.attachments.map((file, fIdx) => (
                       <div key={fIdx} className="relative w-32 h-32 bg-slate-50 border border-slate-100 rounded-xl p-3 flex flex-col items-center justify-center text-center gap-2 group">
@@ -579,7 +579,7 @@ export default function PettyCash() {
                           <X size={12} strokeWidth={3} />
                         </button>
                         <div className="p-2.5 bg-white rounded-xl shadow-sm">
-                          <Paperclip size={16} className="text-indigo-500" />
+                          <Paperclip size={16} className="text-blue-500" />
                         </div>
                         <span className="text-[9px] font-semibold text-slate-600 truncate w-full px-2">{file.name}</span>
                       </div>
@@ -593,7 +593,7 @@ export default function PettyCash() {
             <button
               type="button"
               onClick={addFormEntry}
-              className="flex-1 bg-white border-2 border-dashed border-indigo-200 text-indigo-600 px-8 py-4 rounded-2xl text-sm font-semibold hover:border-indigo-400 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+              className="flex-1 bg-white border-2 border-dashed border-blue-200 text-blue-600 px-8 py-4 rounded-2xl text-sm font-semibold hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
             >
               <Plus size={20} strokeWidth={3} />
               Add Another Transaction
@@ -623,7 +623,7 @@ export default function PettyCash() {
       <div className="bg-white rounded-2xl md:border border-slate-100 shadow-sm overflow-hidden min-h-[400px] flex flex-col">
         {fetching ? (
           <div className="flex-1 flex flex-col items-center justify-center py-20 gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-indigo-600 border-t-transparent mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-blue-600 border-t-transparent mx-auto"></div>
             <p className="text-slate-400 font-semibold text-xs">Syncing Financial Records...</p>
           </div>
         ) : displayTransactions.length === 0 ? (
@@ -682,7 +682,7 @@ export default function PettyCash() {
                               href={link.trim()} 
                               target="_blank" 
                               rel="noreferrer" 
-                              className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all"
+                              className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all"
                             >
                               <Paperclip size={14} />
                             </a>
@@ -711,63 +711,63 @@ export default function PettyCash() {
                   <tr className="border-b border-slate-100 bg-white">
                     <th className="px-6 py-5 text-xs font-semibold text-slate-400 text-center no-print">Actions</th>
                     <th
-                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors group/h"
+                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-blue-600 transition-colors group/h"
                       onClick={() => requestSort('date')}
                     >
                       <div className="flex items-center gap-2">
                         Value Date
                         <div className="flex flex-col no-print">
-                          <ChevronUp size={10} className={`${sortConfig.key === 'date' && sortConfig.direction === 'asc' ? 'text-indigo-600' : 'text-slate-300'}`} />
-                          <ChevronDown size={10} className={`${sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'text-indigo-600' : 'text-slate-300'}`} />
+                          <ChevronUp size={10} className={`${sortConfig.key === 'date' && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-slate-300'}`} />
+                          <ChevronDown size={10} className={`${sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-slate-300'}`} />
                         </div>
                       </div>
                     </th>
                     <th
-                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors group/h"
+                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-blue-600 transition-colors group/h"
                       onClick={() => requestSort('type')}
                     >
                       <div className="flex items-center gap-2">
                         Transaction
                         <div className="flex flex-col no-print">
-                          <ChevronUp size={10} className={`${sortConfig.key === 'type' && sortConfig.direction === 'asc' ? 'text-indigo-600' : 'text-slate-300'}`} />
-                          <ChevronDown size={10} className={`${sortConfig.key === 'type' && sortConfig.direction === 'desc' ? 'text-indigo-600' : 'text-slate-300'}`} />
+                          <ChevronUp size={10} className={`${sortConfig.key === 'type' && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-slate-300'}`} />
+                          <ChevronDown size={10} className={`${sortConfig.key === 'type' && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-slate-300'}`} />
                         </div>
                       </div>
                     </th>
                     <th
-                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors group/h"
+                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-blue-600 transition-colors group/h"
                       onClick={() => requestSort('description')}
                     >
                       <div className="flex items-center gap-2">
                         Description
                         <div className="flex flex-col no-print">
-                          <ChevronUp size={10} className={`${sortConfig.key === 'description' && sortConfig.direction === 'asc' ? 'text-indigo-600' : 'text-slate-300'}`} />
-                          <ChevronDown size={10} className={`${sortConfig.key === 'description' && sortConfig.direction === 'desc' ? 'text-indigo-600' : 'text-slate-300'}`} />
+                          <ChevronUp size={10} className={`${sortConfig.key === 'description' && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-slate-300'}`} />
+                          <ChevronDown size={10} className={`${sortConfig.key === 'description' && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-slate-300'}`} />
                         </div>
                       </div>
                     </th>
                     <th
-                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors group/h text-right"
+                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-blue-600 transition-colors group/h text-right"
                       onClick={() => requestSort('amount')}
                     >
                       <div className="flex items-center justify-end gap-2">
                         Settlement
                         <div className="flex flex-col no-print">
-                          <ChevronUp size={10} className={`${sortConfig.key === 'amount' && sortConfig.direction === 'asc' ? 'text-indigo-600' : 'text-slate-300'}`} />
-                          <ChevronDown size={10} className={`${sortConfig.key === 'amount' && sortConfig.direction === 'desc' ? 'text-indigo-600' : 'text-slate-300'}`} />
+                          <ChevronUp size={10} className={`${sortConfig.key === 'amount' && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-slate-300'}`} />
+                          <ChevronDown size={10} className={`${sortConfig.key === 'amount' && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-slate-300'}`} />
                         </div>
                       </div>
                     </th>
                     <th className="px-6 py-5 text-xs font-semibold text-slate-400 text-center">Docs</th>
                     <th
-                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors group/h text-right"
+                      className="px-6 py-5 text-xs font-semibold text-slate-400 cursor-pointer hover:text-blue-600 transition-colors group/h text-right"
                       onClick={() => requestSort('balance')}
                     >
                       <div className="flex items-center justify-end gap-2">
                         Balance
                         <div className="flex flex-col no-print">
-                          <ChevronUp size={10} className={`${sortConfig.key === 'balance' && sortConfig.direction === 'asc' ? 'text-indigo-600' : 'text-slate-300'}`} />
-                          <ChevronDown size={10} className={`${sortConfig.key === 'balance' && sortConfig.direction === 'desc' ? 'text-indigo-600' : 'text-slate-300'}`} />
+                          <ChevronUp size={10} className={`${sortConfig.key === 'balance' && sortConfig.direction === 'asc' ? 'text-blue-600' : 'text-slate-300'}`} />
+                          <ChevronDown size={10} className={`${sortConfig.key === 'balance' && sortConfig.direction === 'desc' ? 'text-blue-600' : 'text-slate-300'}`} />
                         </div>
                       </div>
                     </th>

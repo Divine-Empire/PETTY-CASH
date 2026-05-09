@@ -8,8 +8,6 @@ import AddExpense from './pages/AddExpense';
 import Settings from './pages/Settings';
 import Ledger from './pages/Ledger';
 import ApprovalPanel from './pages/ApprovalPanel';
-import PettyCash from './pages/PettyCash';
-import ExpenseList from './pages/ExpenseList';
 import Report from './pages/Report';
 import HeadMaster from './pages/HeadMaster';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -34,9 +32,7 @@ function App() {
           }>
             <Route index element={<ProtectedRoute requiredPage="Dashboard"><AdminDashboard /></ProtectedRoute>} />
             <Route path="dashboard" element={<ProtectedRoute requiredPage="Dashboard"><AdminDashboard /></ProtectedRoute>} />
-            <Route path="add-expense" element={<ProtectedRoute requiredPage="Add Expenses"><AddExpense /></ProtectedRoute>} />
-            <Route path="expense-list" element={<ProtectedRoute requiredPage="Expense List"><ExpenseList /></ProtectedRoute>} />
-            <Route path="petty-cash" element={<ProtectedRoute requiredPage="Petty Cash"><PettyCash /></ProtectedRoute>} />
+            <Route path="add-expense" element={<ProtectedRoute requiredPage="Transactions"><AddExpense /></ProtectedRoute>} />
             
             {/* Admin/Permission Restricted Routes */}
             <Route path="settings" element={<ProtectedRoute requiredPage="Settings" allowedRoles={['ADMIN']}><Settings /></ProtectedRoute>} />

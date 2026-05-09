@@ -17,6 +17,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import logo from '../Assets/logo.png';
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const navigate = useNavigate();
@@ -29,10 +30,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
 
   const adminMenuItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/add-expense', icon: Plus, label: 'Add Expenses' },
+    { path: '/add-expense', icon: Plus, label: 'Entry' },
     { path: '/approval-panel', icon: FileText, label: 'Approval Panel' },
-    { path: '/expense-list', icon: FileText, label: 'Expense List' },
-    { path: '/petty-cash', icon: Wallet, label: 'Petty Cash' },
     { path: '/head-master', icon: Database, label: 'Head Master' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ];
@@ -66,7 +65,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
         {/* Desktop Collapse Toggle - Hidden on mobile */}
         <button 
           onClick={onToggleCollapse}
-          className="hidden lg:flex absolute -right-4 top-10 w-8 h-8 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-500 hover:shadow-xl transition-all duration-300 z-[80] shadow-md active:scale-90 group/toggle"
+          className="hidden lg:flex absolute -right-4 top-10 w-8 h-8 bg-white border border-slate-200 rounded-full items-center justify-center text-slate-400 hover:text-blue-600 hover:border-blue-500 hover:shadow-xl transition-all duration-300 z-[80] shadow-md active:scale-90 group/toggle"
         >
           {isCollapsed ? <ChevronRight size={18} strokeWidth={3} /> : <ChevronLeft size={18} strokeWidth={3} />}
         </button>
@@ -77,12 +76,12 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
           <div className={`h-24 flex items-center border-b border-slate-100 bg-white sticky top-0 z-10 transition-all duration-500 px-5 
             ${isCollapsed ? 'lg:justify-center justify-between' : 'justify-between'}`}>
             <div className="flex items-center gap-3 group cursor-pointer overflow-hidden min-w-0">
-              <div className="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0 group-hover:rotate-6 transition-all duration-500">
-                <Wallet size={24} className="text-white" />
+              <div className="w-11 h-11 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all duration-500">
+                <img src={logo} alt="Logo" className="w-full h-full object-contain" />
               </div>
               <div className={`flex flex-col animate-in fade-in slide-in-from-left-4 duration-500 overflow-hidden ${isCollapsed ? 'lg:hidden' : ''}`}>
                 <span className="text-2xl font-semibold text-slate-900  leading-none truncate">PeteCash</span>
-                <span className="text-[10px] font-semibold text-indigo-600   mt-2 truncate">Enterprise</span>
+                <span className="text-[10px] font-semibold text-blue-600   mt-2 truncate">Enterprise</span>
               </div>
             </div>
 
@@ -113,8 +112,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   className={`
                     flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 group relative
                     ${isActive 
-                      ? 'bg-indigo-600 text-white shadow-sm' 
-                      : 'text-slate-500 hover:bg-slate-50 hover:text-indigo-600'}
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'}
                     ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}
                     flex
                   `}
@@ -151,7 +150,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
               <div className={`flex items-center gap-3 ${isCollapsed ? 'lg:flex-col mb-5 lg:mb-0' : 'mb-5'}`}>
                 <div className="relative group flex-shrink-0">
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-semibold shadow-sm transition-all duration-500 ${
-                    isCollapsed ? 'lg:bg-indigo-600 lg:text-white bg-slate-50 text-indigo-600 border-2 border-indigo-50' : 'bg-slate-50 text-indigo-600 border-2 border-indigo-50'
+                    isCollapsed ? 'lg:bg-blue-600 lg:text-white bg-slate-50 text-blue-600 border-2 border-blue-50' : 'bg-slate-50 text-blue-600 border-2 border-blue-50'
                   }`}>
                     {user?.name?.charAt(0).toUpperCase() || <User size={22} />}
                   </div>

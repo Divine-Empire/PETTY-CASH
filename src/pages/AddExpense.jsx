@@ -1,203 +1,35 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import {
- Plus, Filter, Search, ChevronLeft, ChevronRight, X, Eye, Calendar, Check, AlertTriangle, Download, ArrowUpDown
+  Plus, Search, X, Eye, Calendar, Check, ArrowUpDown, TrendingUp, TrendingDown, Trash2, Database, Save, RefreshCcw, Filter, User, Building2, Upload, FileText, Paperclip, Loader2
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { formatDate, formatCurrency, getTodayDate } from '../utils/helpers';
+import { formatDate, formatCurrency, getTodayDate, getGoogleSheetTimestamp, fileToBase64, compressImage } from '../utils/helpers';
 
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
 
+const branches = ['Head Office','Mumbai','Delhi','Bangalore','Chennai'];
+
+// Drive Folder IDs
+const EXPENSE_FOLDER_ID = '1bBqruNp7BSsGL217YrJexi49K9gUAYK2';
+const RECEIVE_FOLDER_ID = '1U7iXD3-_v3dKn-gyv5M3eG3HxV01mTmR';
+
 export default function AddExpense() {
- const { user } = useAuthStore();
+  const { user } = useAuthStore();
+  const fileInputRef = useRef(null);
 
- // ---- State ----
- const [expenses, setExpenses] = useState([]);
- const [fetching, setFetching] = useState(true);
- const [submitting, setSubmitting] = useState(false);
- const [isUploading, setIsUploading] = useState(false);
- const [masterData, setMasterData] = useState([]); // Dynamic master data
+  // ---- State ----
+  const [expenses, setExpenses] = useState([]);
+  const [fetching, setFetching] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [masterData, setMasterData] = useState([]); 
+  const [activeType, setActiveType] = useState('EXPENSE'); 
+  const [drafts, setDrafts] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [processingStatus, setProcessingStatus] = useState('');
 
- // Form
- const [formData, setFormData] = useState({
-  date: getTodayDate(),
-  paymentMode: 'Cash',
-  groupHead: '',
-  expenseHead: '',
-  subHead: '',
-  amount: '',
-  paidTo: '',
-  branch: 'Head Office',
-  description: '',
-  billUrl: ''  // <-- Bill / Receipt link (paste URL)
- });
-
- // UI toggles
- const [showFormModal, setShowFormModal] = useState(false);
- const [showMobileFilters, setShowMobileFilters] = useState(false);
-
- // Filters & Pagination
- const [filters, setFilters] = useState({
-  fromDate: '',
-  toDate: '',
-  paidTo: '',
-  mode: '',
-  searchQuery: '',
-  sortOrder: 'desc'
- });
- const [currentPage, setCurrentPage] = useState(1);
- const [itemsPerPage, setItemsPerPage] = useState(15);
-
- // ---- Fetch Master Data (Group/Expense/Sub Heads) ----
- const fetchMasterData = async () => {
-  try {
-   const res = await fetch(APPSCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({ action: 'readMaster' })
-   });
-   const json = await res.json();
-   if (json.success) {
-    setMasterData(json.data || []);
-   }
-  } catch (err) {
-   console.error('Error fetching master data:', err);
-  }
- };
-
- const groupHeads = useMemo(() => 
-  [...new Set(masterData.map(d => d['Group Head'] || d['Group Heads']).filter(Boolean))].sort(), 
-  [masterData]
- );
-
- const expenseHeads = useMemo(() => 
-  [...new Set(masterData.map(d => d['Expense Head'] || d['Expense Heads']).filter(Boolean))].sort(), 
-  [masterData]
- );
-
- const subHeads = useMemo(() => 
-  [...new Set(masterData.map(d => d['Sub Head'] || d['Sub Heads']).filter(Boolean))].sort(), 
-  [masterData]
- );
-
- // ---- Fetch expenses from Apps Script ----
- const fetchExpenses = async () => {
-  try {
-   setFetching(true);
-   const res = await fetch(APPSCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({ action: 'read' })
-   });
-   const json = await res.json();
-   if (json.success) {
-    setExpenses(json.data || []);
-   } else {
-    toast.error('Failed to load expenses');
-   }
-  } catch (err) {
-   toast.error('Network error while loading expenses');
-  } finally {
-   setFetching(false);
-  }
- };
-
- useEffect(() => { 
-  fetchExpenses(); 
-  fetchMasterData();
- }, []);
- useEffect(() => { setCurrentPage(1); }, [filters]);
-
- // ---- Client‑side filtering & pagination ----
- const filteredExpenses = expenses.filter(e => {
-  if (filters.fromDate && e.Date < filters.fromDate) return false;
-  if (filters.toDate && e.Date > filters.toDate) return false;
-  if (filters.paidTo && e['Paid To'] !== filters.paidTo) return false;
-  if (filters.mode && e['Payment mode'] !== filters.mode) return false;
-  if (filters.searchQuery) {
-   const q = filters.searchQuery.toLowerCase();
-   const match =
-    (e.SN && String(e.SN).toLowerCase().includes(q)) ||
-    (e['Paid To'] && e['Paid To'].toLowerCase().includes(q)) ||
-    (e.Date && String(e.Date).includes(q)) ||
-    (e['Amount (INR)'] && String(e['Amount (INR)']).toLowerCase().includes(q)) ||
-    (e['Payment mode'] && e['Payment mode'].toLowerCase().includes(q)) ||
-    (e['Description / Reason'] && e['Description / Reason'].toLowerCase().includes(q)) ||
-    (e['Group Head'] && e['Group Head'].toLowerCase().includes(q)) ||
-    (e['Expense Head'] && e['Expense Head'].toLowerCase().includes(q)) ||
-    (e['Sub Head'] && e['Sub Head'].toLowerCase().includes(q));
-   if (!match) return false;
-  }
-  return true;
- });
-
- const sortedExpenses = useMemo(() => {
-  return [...filteredExpenses].sort((a, b) => {
-   // Sort by Date primarily
-   const dateA = a.Date || '';
-   const dateB = b.Date || '';
-   const dateComp = filters.sortOrder === 'asc' 
-    ? dateA.localeCompare(dateB) 
-    : dateB.localeCompare(dateA);
-   
-   if (dateComp !== 0) return dateComp;
-   
-   // If dates are same, sort by SN (assuming format VCH-YYYY-XXX)
-   const snA = String(a.SN || '');
-   const snB = String(b.SN || '');
-   return filters.sortOrder === 'asc' 
-    ? snA.localeCompare(snB) 
-    : snB.localeCompare(snA);
-  });
- }, [filteredExpenses, filters.sortOrder]);
- const totalPages = Math.ceil(sortedExpenses.length / itemsPerPage);
- const paginatedExpenses = sortedExpenses.slice(
-  (currentPage - 1) * itemsPerPage,
-  currentPage * itemsPerPage
- );
- const pageTotalAmount = paginatedExpenses.reduce((s, e) => s + (parseFloat(e['Amount (INR)']) || 0), 0);
- const totalAmount = sortedExpenses.reduce((s, e) => s + (parseFloat(e['Amount (INR)']) || 0), 0);
-
- // ---- Form submit ----
- const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  // Validation
-  if (!formData.paidTo.trim()) { toast.error('Please enter who it was paid to'); return; }
-  if (!formData.amount || parseFloat(formData.amount) <= 0) { toast.error('Please enter valid amount'); return; }
-  if (!formData.groupHead) { toast.error('Please select Group Head'); return; }
-  if (!formData.expenseHead) { toast.error('Please select Expense Head'); return; }
-  if (!formData.subHead) { toast.error('Please select Sub Head'); return; }
-  if (!formData.description.trim()) { toast.error('Please enter Description/Reason'); return; }
-
-  try {
-   setSubmitting(true);
-   const payload = {
-    action: 'create',
-    data: {
-     Date: formData.date,
-     'Payment mode': formData.paymentMode,
-     'Group Head': formData.groupHead,
-     'Expense Head': formData.expenseHead,
-     'Sub Head': formData.subHead,
-     'Amount (INR)': parseFloat(formData.amount),
-     'Paid To': formData.paidTo,
-     Branch: formData.branch,
-     'Description / Reason': formData.description,
-     'Bill / Receipt': formData.billUrl,
-     User: user?.name || 'Admin',
-    }
-   };
-
-   const res = await fetch(APPSCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify(payload)
-   });
-   const result = await res.json();
-   if (!result.success) throw new Error(result.error || 'Unknown error');
-
-   toast.success(`Expense of ${formatCurrency(formData.amount)} added!`);
-
-   // Reset form
-   setFormData({
+  // Form States
+  const [expenseForm, setExpenseForm] = useState({
     date: getTodayDate(),
     paymentMode: 'Cash',
     groupHead: '',
@@ -206,584 +38,517 @@ export default function AddExpense() {
     amount: '',
     paidTo: '',
     branch: 'Head Office',
-    description: '',
-    billUrl: ''
-   });
-   setShowFormModal(false);
-   await fetchExpenses();      // refresh list
-  } catch (error) {
-   toast.error(error.message || 'Error adding expense');
-  } finally {
-   setSubmitting(false);
-  }
- };
+    description: ''
+  });
 
- // ---- CSV Export ----
- const exportCSV = () => {
-  if (sortedExpenses.length === 0) {
-   toast.error('No data to export');
-   return;
-  }
-  const headers = ['VOUCHER', 'DATE', 'PAID TO', 'GROUP', 'EXPENSE', 'SUB HEAD', 'DESCRIPTION', 'AMOUNT', 'MODE', 'BRANCH', 'USER'];
-  const rows = sortedExpenses.map(e => [
-   e.SN,
-   e.Date,
-   `"${e['Paid To'] ? String(e['Paid To']).replace(/"/g, '""') : ''}"`,
-   `"${e['Group Head'] || ''}"`,
-   `"${e['Expense Head'] || ''}"`,
-   `"${e['Sub Head'] || ''}"`,
-   `"${e['Description / Reason'] ? String(e['Description / Reason']).replace(/"/g, '""') : ''}"`,
-   e['Amount (INR)'],
-   e['Payment mode'],
-   e.Branch,
-   e.User || e.user || 'Admin'
-  ]);
-  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Expenses_Report_${filters.fromDate || 'Start'}_to_${filters.toDate || 'End'}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast.success('Report Exported!');
- };
+  const [receiveForm, setReceiveForm] = useState({
+    valueDate: getTodayDate(),
+    transactionType: 'Cash Received (+)',
+    amount: '',
+    receivedFrom: '',
+    branch: 'Head Office',
+    descriptionMemo: ''
+  });
 
- // ---- Helper to open bill link ----
- const openBill = (url) => {
-  if (url) window.open(url, '_blank');
- };
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [filters, setFilters] = useState({ fromDate: '', toDate: '', searchQuery: '', flow: 'ALL', sortOrder: 'desc' });
 
- return (
-  <>
-  <div className="p-2 md:p-6 space-y-2 md:space-y-6">
-   {/* Header – filters & add button (unchanged from original) */}
-   {/* Header – filters & add button */}
-   <div className="flex flex-col gap-4">
-    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-     <div className="flex flex-col gap-1">
-      <h1 className="text-2xl font-semibold text-slate-900 ">Expenses</h1>
-      <p className="text-xs font-semibold text-slate-400 ">Management Dashboard</p>
-     </div>
-     
-     <div className="flex items-center gap-3 w-full lg:w-auto">
-       <div className="relative flex-1 lg:w-80 group">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" size={18} />
-        <input
-         type="text"
-         placeholder="Search vouchers, persons, heads..."
-         value={filters.searchQuery}
-         onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-         className="w-full bg-white border border-slate-100 rounded-2xl pl-12 pr-4 py-3 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm font-semibold text-slate-700 transition-all placeholder:text-slate-300 shadow-sm"
-        />
-       </div>
-       <button
-        onClick={() => setShowMobileFilters(!showMobileFilters)}
-        className={`lg:hidden p-3 rounded-2xl transition-all active:scale-95 shadow-sm border ${showMobileFilters ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-100 text-slate-500'}`}
-       >
-        <Filter size={20} />
-       </button>
-       <button
-        onClick={exportCSV}
-        className="hidden lg:flex bg-white border border-slate-100 text-slate-700 px-6 py-3 rounded-2xl font-semibold items-center gap-2 transition-all shadow-sm hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 active:scale-95"
-       >
-        <Download size={20} className="text-emerald-600" /> Export CSV
-       </button>
-       <button
-        onClick={() => setShowFormModal(true)}
-        className="flex bg-indigo-600 hover:bg-indigo-700 text-white px-4 lg:px-6 py-3 rounded-2xl font-semibold items-center justify-center gap-2 transition-all shadow-sm hover:-translate-y-1 active:scale-95 text-sm lg:text-base flex-1 lg:flex-none"
-       >
-        <Plus size={20} /> <span className="hidden sm:inline">Add Expense</span><span className="sm:hidden">Add</span>
-       </button>
-     </div>
-    </div>
+  // ---- Fetch Data ----
+  const fetchMasterData = async () => {
+    try {
+      const res = await fetch(APPSCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'readMaster' }) });
+      const json = await res.json();
+      if (json.success) setMasterData(json.data || []);
+    } catch { console.error('Master data sync failed'); }
+  };
 
-    {/* Filters Row */}
-    <div className={`${showMobileFilters ? 'grid' : 'hidden lg:flex'} grid-cols-1 sm:grid-cols-2 lg:flex items-center gap-3 w-full`}>
-     <div className="flex-1 min-w-[150px]">
-       <label className="text-[10px] font-semibold text-slate-400  ml-1 mb-1 block">From Date</label>
-       <input
-        type="date"
-        value={filters.fromDate}
-        onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
-        className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm font-semibold text-slate-700 transition-all"
-       />
-     </div>
-     <div className="flex-1 min-w-[150px]">
-       <label className="text-[10px] font-semibold text-slate-400  ml-1 mb-1 block">To Date</label>
-       <input
-        type="date"
-        value={filters.toDate}
-        onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
-        className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm font-semibold text-slate-700 transition-all"
-       />
-     </div>
-     <div className="flex-1 min-w-[150px]">
-       <label className="text-[10px] font-semibold text-slate-400  ml-1 mb-1 block">Recipient</label>
-       <input
-        type="text"
-        value={filters.paidTo}
-        onChange={(e) => setFilters({ ...filters, paidTo: e.target.value })}
-        placeholder="Filter by name..."
-        className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm font-semibold text-slate-700 transition-all placeholder:text-slate-300"
-       />
-     </div>
-     <div className="flex-1 min-w-[150px]">
-       <label className="text-[10px] font-semibold text-slate-400  ml-1 mb-1 block">Payment Mode</label>
-       <select
-        value={filters.mode}
-        onChange={(e) => setFilters({ ...filters, mode: e.target.value })}
-        className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2.5 focus:ring-4 focus:ring-indigo-500/10 outline-none text-sm font-semibold text-slate-700 transition-all cursor-pointer appearance-none"
-       >
-        <option value="">All Modes</option>
-        <option value="Cash">Cash</option>
-        <option value="Cheque">Cheque</option>
-        <option value="Bank Transfer">Bank Transfer</option>
-        <option value="Online">Online</option>
-       </select>
-     </div>
-     <div className="flex-1 min-w-[150px]">
-       <label className="text-[10px] font-semibold text-slate-400  ml-1 mb-1 block">Sort Order</label>
-       <button
-        onClick={() => setFilters({ ...filters, sortOrder: filters.sortOrder === 'asc' ? 'desc' : 'asc' })}
-        className="w-full bg-white border border-slate-100 rounded-xl px-4 py-2 flex items-center justify-between hover:border-indigo-300 transition-all group shadow-sm"
-       >
-        <span className="text-sm font-semibold text-slate-700">
-         {filters.sortOrder === 'asc' ? 'Oldest First' : 'Newest First'}
-        </span>
-        <ArrowUpDown size={16} className={`text-slate-400 group-hover:text-indigo-600 transition-transform ${filters.sortOrder === 'asc' ? '' : 'rotate-180'}`} />
-       </button>
-     </div>
-    </div>
-   </div>
+  const fetchExpenses = async () => {
+    try {
+      setFetching(true);
+      const res = await fetch(APPSCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'read' }) });
+      const json = await res.json();
+      if (json.success) setExpenses((json.data || []).filter(e => e['Delete Status'] !== 'DELETED'));
+    } catch { toast.error('Error loading ledger'); } finally { setFetching(false); }
+  };
 
-  {/* Summary Stats Bar */}
-  {!fetching && paginatedExpenses.length > 0 && (
-   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 mt-4">
-    <div className="bg-white border border-slate-100 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all">
-     <p className="text-xs font-semibold text-slate-400  mb-1">Page Total</p>
-     <div className="flex items-baseline gap-1">
-      <span className="text-lg md:text-2xl font-semibold text-rose-600 ">{formatCurrency(pageTotalAmount)}</span>
-      <span className="text-xs font-semibold text-rose-400">INR</span>
-     </div>
-    </div>
-    <div className="bg-white border border-slate-100 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all">
-     <p className="text-xs font-semibold text-slate-400  mb-1">Filtered Total</p>
-     <div className="flex items-baseline gap-1">
-      <span className="text-lg md:text-2xl font-semibold text-slate-900 ">{formatCurrency(totalAmount)}</span>
-      <span className="text-xs font-semibold text-slate-400">INR</span>
-     </div>
-    </div>
-    <div className="hidden md:block bg-white border border-slate-100 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all">
-     <p className="text-xs font-semibold text-slate-400  mb-1">Visible Entries</p>
-     <div className="flex items-baseline gap-1">
-      <span className="text-lg md:text-2xl font-semibold text-indigo-600 ">{filteredExpenses.length}</span>
-      <span className="text-xs font-semibold text-indigo-400">VOUCHERS</span>
-     </div>
-    </div>
-   </div>
-  )}
+  useEffect(() => { fetchExpenses(); fetchMasterData(); }, []);
 
-  {/* ---------- Expenses Table (Desktop & Mobile) ---------- */}
-  <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col mt-4">
-    {/* Mobile Cards */}
-    <div className="md:hidden flex flex-col gap-4 p-4 pb-24 bg-slate-50/50">
-     {fetching ? (
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
-       <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent"></div>
-       <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Fetching Records</p>
-      </div>
-     ) : paginatedExpenses.map((expense, idx) => (
-      <div key={expense.SN || idx} className="bg-white rounded-3xl border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] p-5 relative flex flex-col gap-4 active:scale-[0.98] transition-all overflow-hidden group">
-       <div className="absolute top-0 left-0 w-1.5 h-full bg-slate-100 group-hover:bg-indigo-500 transition-colors"></div>
-       
-       <div className="flex justify-between items-start">
-        <div className="flex flex-col gap-1">
-         <div className="flex items-center gap-2 mb-1">
-          <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-[10px] font-bold border border-indigo-100 uppercase tracking-tighter">
-           {expense.SN || 'N/A'}
-          </span>
-          <div className="flex items-center gap-1 text-slate-400">
-           <Calendar size={12} strokeWidth={2.5} />
-           <span className="text-[11px] font-bold">{formatDate(expense.Date)}</span>
-          </div>
-         </div>
-         <h3 className="font-bold text-slate-900 text-base leading-tight pr-4">{expense['Paid To']}</h3>
-         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-wide border border-indigo-100/50">{expense['Group Head']}</span>
-         </div>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-         <span className="font-black text-rose-600 text-xl tracking-tight leading-none">{formatCurrency(expense['Amount (INR)'])}</span>
-         <div className="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-sky-100 uppercase tracking-wider">{expense['Payment mode']}</div>
-        </div>
-       </div>
-       
-       <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100/60">
-        <div className="flex flex-col gap-1">
-         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Category</span>
-         <p className="text-[11px] font-bold text-slate-700 truncate">{expense['Expense Head']}</p>
-         <p className="text-[10px] font-semibold text-slate-400 truncate">{expense['Sub Head']}</p>
-        </div>
-        <div className="flex flex-col gap-1 border-l border-slate-200 pl-3">
-         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Processed By</span>
-         <p className="text-[11px] font-bold text-slate-700 truncate">{expense['User'] || expense['user'] || 'Admin'}</p>
-         <p className="text-[10px] font-semibold text-slate-400 truncate">{expense.Branch || 'Head Office'}</p>
-        </div>
-       </div>
+  // Cascading
+  const groupHeads = useMemo(() => [...new Set(masterData.map(d => d['Group Head'] || d['Group Heads']).filter(Boolean))].sort(), [masterData]);
+  const expenseHeads = useMemo(() => {
+    if (!expenseForm.groupHead) return [];
+    return [...new Set(masterData.filter(d => (d['Group Head'] || d['Group Heads']) === expenseForm.groupHead).map(d => d['Expense Head'] || d['Expense Heads']).filter(Boolean))].sort();
+  }, [masterData, expenseForm.groupHead]);
+  const subHeads = useMemo(() => {
+    if (!expenseForm.expenseHead) return [];
+    return [...new Set(masterData.filter(d => (d['Expense Head'] || d['Expense Heads']) === expenseForm.expenseHead).map(d => d['Sub Head'] || d['Sub Heads']).filter(Boolean))].sort();
+  }, [masterData, expenseForm.expenseHead]);
 
-       <div className="space-y-1.5">
-        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none ml-1">Purpose / Remarks</span>
-        <p className="text-slate-700 text-xs font-semibold leading-relaxed bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
-         {expense['Description / Reason'] || 'No description provided.'}
-        </p>
-       </div>
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (selectedFiles.length + files.length > 5) {
+      toast.error('Max 5 files allowed');
+      return;
+    }
+    const newFiles = [];
+    for (const file of files) {
+      const base64 = await compressImage(file);
+      newFiles.push({ name: file.name, base64, type: file.type });
+    }
+    setSelectedFiles([...selectedFiles, ...newFiles]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
-       {expense['Bill / Receipt'] && (
-        <button onClick={() => openBill(expense['Bill / Receipt'])}
-         className="text-white bg-slate-900 hover:bg-slate-800 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2.5 w-full shadow-lg shadow-slate-200 transition-all active:scale-95">
-         <Eye size={16} strokeWidth={2.5} /> View Attached Bill
-        </button>
-       )}
-      </div>
-     ))}
-     {!fetching && filteredExpenses.length === 0 && (
-      <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
-       <AlertTriangle className="text-amber-400 mb-3" size={40} strokeWidth={1.5} />
-       <p className="text-slate-500 font-bold text-sm">No expenses found matching filters.</p>
-      </div>
-     )}
-    </div>
+  const removeFile = (idx) => setSelectedFiles(selectedFiles.filter((_, i) => i !== idx));
 
-    {/* Desktop Table */}
-    <div className="hidden md:block overflow-x-auto overflow-y-auto h-[calc(100vh-300px)] [&::-webkit-scrollbar]:hidden">
-     <table className="w-full text-left border-collapse relative">
-      <thead className="sticky top-0 z-10 shadow-sm">
-       <tr className="border-b border-gray-200 bg-gray-50/50">
-        <th className="px-5 py-4 text-xs font-semibold text-gray-500 tracking-wider">Voucher</th>
-        <th className="px-5 py-4 text-xs font-semibold text-gray-500 tracking-wider">Date</th>
-        <th className="px-5 py-4 text-xs font-semibold text-gray-500 tracking-wider">Category</th>
-        <th className="px-5 py-4 text-xs font-semibold text-gray-500 tracking-wider">Description</th>
-        <th className="px-5 py-4 text-xs font-semibold text-gray-500 tracking-wider">By</th>
-        <th className="px-5 py-4 text-xs font-semibold text-gray-500 tracking-wider text-right">Amount</th>
-        <th className="px-5 py-4 text-xs font-semibold text-gray-500 tracking-wider text-center">Mode</th>
-        <th className="px-5 py-4 text-xs font-semibold text-gray-500 tracking-wider text-center">Bill</th>
-       </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-       {fetching ? (
-        <tr>
-         <td colSpan="8" className="px-5 py-12 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="text-gray-500 mt-3 text-sm">Loading expenses...</p>
-         </td>
-        </tr>
-       ) : paginatedExpenses.map((expense, idx) => (
-        <tr key={expense.SN || idx} className="hover:bg-gray-50/50 transition-colors group">
-         {/* VOUCHER */}
-         <td className="px-5 py-4">
-          <span className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-[12px] font-semibold border border-indigo-100 shadow-sm">{expense.SN}</span>
-         </td>
-         
-         {/* DATE */}
-         <td className="px-5 py-4">
-          <span className="text-[13px] text-gray-600">{formatDate(expense.Date)}</span>
-         </td>
-         
-         {/* CATEGORY */}
-         <td className="px-5 py-4">
-          <div className="flex flex-col">
-           <span className="text-[13px] font-semibold text-gray-900">{expense['Group Head']}</span>
-           <span className="text-[12px] text-gray-400">{expense['Expense Head']} / {expense['Sub Head']}</span>
-          </div>
-         </td>
-         
-         {/* DESCRIPTION */}
-         <td className="px-5 py-4 max-w-[200px]">
-          <div className="flex flex-col">
-           <span className="text-[13px] font-medium text-gray-900 truncate" title={expense['Description / Reason']}>{expense['Description / Reason'] || '-'}</span>
-           <span className="text-[12px] text-gray-400 truncate" title={expense['Paid To']}>{expense['Paid To']}</span>
-          </div>
-         </td>
-         
-         {/* BY */}
-         <td className="px-5 py-4">
-          <div className="flex flex-col">
-           <span className="text-[13px] text-gray-500">{expense['User'] || expense['user'] || '-'}</span>
-           <span className="text-[12px] text-gray-400">{expense.Branch || 'HO'}</span>
-          </div>
-         </td>
-         
-         {/* AMOUNT */}
-         <td className="px-5 py-4 text-right">
-          <span className="text-[14px] font-semibold text-gray-900">{formatCurrency(expense['Amount (INR)'])}</span>
-         </td>
-         
-         {/* MODE */}
-         <td className="px-5 py-4 text-center">
-          <span className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-medium border border-gray-200 tracking-wide">
-           {expense['Payment mode'] || 'CASH'}
-          </span>
-         </td>
-         
-         {/* BILL */}
-         <td className="px-5 py-4 text-center">
-          {expense['Bill / Receipt'] ? (
-           <button onClick={() => openBill(expense['Bill / Receipt'])} title="View Bill" className="hover:scale-110 transition-transform focus:outline-none">
-            <Check size={16} strokeWidth={3} className="text-emerald-500 mx-auto" />
-           </button>
-          ) : (
-           <AlertTriangle size={16} strokeWidth={2.5} className="text-amber-500 mx-auto" />
-          )}
-         </td>
-        </tr>
-       ))}
-      </tbody>
-     </table>
-     {!fetching && filteredExpenses.length === 0 && (
-      <div className="p-8 text-center text-gray-500">No entries found.</div>
-     )}
-    </div>
+  const addToQueue = (e) => {
+    e.preventDefault();
+    if (activeType === 'EXPENSE') {
+      if (!expenseForm.amount || !expenseForm.groupHead) { toast.error('Required fields missing'); return; }
+      const newDraft = {
+        type: 'EXPENSE',
+        label: `${expenseForm.groupHead}: ${formatCurrency(expenseForm.amount)}`,
+        files: [...selectedFiles],
+        payload: {
+          'Date': expenseForm.date,
+          'Payment mode': expenseForm.paymentMode,
+          'Group Head': expenseForm.groupHead,
+          'Expense Head': expenseForm.expenseHead,
+          'Sub Head': expenseForm.subHead,
+          'Amount (INR)': parseFloat(expenseForm.amount),
+          'Paid To': expenseForm.paidTo,
+          'Branch': expenseForm.branch,
+          'Description / Reason': expenseForm.description,
+          'Bill / Receipt': '',
+          'user': user?.name || 'Admin',
+          'Planned': '',
+          'Approval Timestamp': '',
+          'Status': 'PENDING',
+          'Approval / Reject - Remark': '',
+          'Delete Status': 'ACTIVE',
+          'Flow': 'OUT'
+        }
+      };
+      setDrafts([...drafts, newDraft]);
+      setExpenseForm({...expenseForm, amount: '', description: '', paidTo: ''});
+    } else {
+      if (!receiveForm.amount) { toast.error('Amount required'); return; }
+      const newDraft = {
+        type: 'RECEIVE',
+        label: `Receive: ${formatCurrency(receiveForm.amount)}`,
+        files: [...selectedFiles],
+        payload: {
+          'Date': receiveForm.valueDate,
+          'Payment mode': receiveForm.transactionType,
+          'Group Head': 'INCOME', 'Expense Head': 'RECEIVE', 'Sub Head': '-',
+          'Amount (INR)': parseFloat(receiveForm.amount),
+          'Paid To': receiveForm.receivedFrom || user?.name || 'Admin',
+          'Branch': receiveForm.branch || 'Head Office',
+          'Description / Reason': receiveForm.descriptionMemo,
+          'user': user?.name || 'Admin',
+          'Planned': getGoogleSheetTimestamp(),
+          'Approval Timestamp': getGoogleSheetTimestamp(),
+          'Status': 'APPROVED',
+          'Approval / Reject - Remark': 'Auto-approved',
+          'Delete Status': 'ACTIVE',
+          'Flow': 'IN'
+        }
+      };
+      setDrafts([...drafts, newDraft]);
+      setReceiveForm({...receiveForm, amount: '', descriptionMemo: '', receivedFrom: ''});
+    }
+    setSelectedFiles([]);
+    toast.success('Added to session queue');
+  };
 
-    {/* Pagination footer */}
-    <div className="px-2 md:px-4 py-2 border-t border-gray-200 bg-gray-50 flex flex-col lg:flex-row items-center justify-between gap-2 lg:gap-4 rounded-b-lg pb-2 md:pb-3">
-
-
-     <div className="flex w-full lg:w-auto justify-between items-center order-3 lg:order-1 gap-2">
-      <div className="text-xs md:text-sm text-gray-600 flex items-center gap-1.5 md:gap-2 flex-shrink-0">
-       <select value={itemsPerPage} onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-        className="border border-gray-300 rounded-md px-1 md:px-2 py-1 focus:outline-none focus:border-indigo-500 bg-white font-medium text-xs md:text-sm shadow-sm text-gray-900">
-        <option value={10}>10</option>
-        <option value={15}>15</option>
-        <option value={20}>20</option>
-        <option value={50}>50</option>
-        <option value={100}>100</option>
-       </select>
-       <span className="text-xs md:text-sm text-gray-500 whitespace-nowrap ml-1 font-medium">
-        {filteredExpenses.length > 0 ? ((currentPage - 1) * itemsPerPage) + 1 : 0}-{Math.min(currentPage * itemsPerPage, sortedExpenses.length)} of {sortedExpenses.length}
-       </span>
-      </div>
-
-      <div className="flex gap-1.5 md:gap-2 justify-end items-center flex-shrink-0 text-gray-700">
-       <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-        className="p-1 md:px-2 md:py-1 border border-gray-300 rounded-md bg-white disabled:opacity-50 hover:bg-gray-50 transition shadow-sm text-indigo-600">
-        <ChevronLeft size={16} strokeWidth={2.5} />
-       </button>
-       <div className="flex items-center text-xs md:text-sm font-medium whitespace-nowrap text-gray-500">
-        Pg {currentPage}/{totalPages || 1}
-       </div>
-       <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0}
-        className="p-1 md:px-2 md:py-1 border border-gray-300 rounded-md bg-white disabled:opacity-50 hover:bg-gray-50 transition shadow-sm text-indigo-600">
-        <ChevronRight size={16} strokeWidth={2.5} />
-       </button>
-      </div>
-     </div>
-    </div>
-   </div>
-  </div>
-
-  {/* Form Modal */}
-  {showFormModal && (
-   <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-2 md:p-4">
-    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[95vh] md:max-h-[90vh] overflow-hidden">
-     {/* Modal Header */}
-     <div className="p-5 md:p-8 pb-3 md:pb-4 flex justify-between items-center border-b border-slate-50">
-      <div className="flex items-center gap-3 md:gap-4">
-       <div className="p-2.5 md:p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-200">
-        <Plus size={20} className="md:w-6 md:h-6" />
-       </div>
-       <div>
-        <h2 className="text-xl md:text-2xl font-bold text-slate-900">Add Expense</h2>
-        <p className="text-slate-400 text-[10px] md:text-xs font-semibold uppercase tracking-wider">New Voucher Entry</p>
-       </div>
-      </div>
-      <button onClick={() => setShowFormModal(false)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
-       <X size={24} />
-      </button>
-     </div>
-
-     <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-5 md:p-8 pt-2 scrollbar-hide space-y-4 md:space-y-6">
-       {/* Date & Payment Mode */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        <div className="space-y-1">
-         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Date *</label>
-         <input type="date" value={formData.date}
-          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900" required />
-        </div>
-        <div className="space-y-1">
-         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Payment Mode *</label>
-         <select value={formData.paymentMode}
-          onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
-          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900 cursor-pointer appearance-none" required>
-          {['Cash', 'Cheque', 'Bank Transfer', 'Online'].map((m, i) => <option key={i} value={m}>{m}</option>)}
-         </select>
-        </div>
-       </div>
-
-       {/* Group & Expense Head */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        <div className="space-y-1">
-         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Group Head *</label>
-         <select value={formData.groupHead}
-          onChange={(e) => setFormData({ ...formData, groupHead: e.target.value })}
-          className={`w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold cursor-pointer appearance-none ${!formData.groupHead ? 'text-slate-300' : 'text-slate-900'}`} required>
-          <option value="">-- Select Group --</option>
-          {groupHeads.map((g, i) => <option key={i} value={g}>{g}</option>)}
-         </select>
-        </div>
-        <div className="space-y-1">
-         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Expense Head *</label>
-         <select value={formData.expenseHead}
-          onChange={(e) => setFormData({ ...formData, expenseHead: e.target.value })}
-          className={`w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold cursor-pointer appearance-none ${!formData.expenseHead ? 'text-slate-300' : 'text-slate-900'}`} required>
-          <option value="">-- Select Expense Head --</option>
-          {expenseHeads.map((h, i) => <option key={i} value={h}>{h}</option>)}
-         </select>
-        </div>
-       </div>
-
-       {/* Sub Head & Amount */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        <div className="space-y-1">
-         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Sub Head *</label>
-         <select value={formData.subHead}
-          onChange={(e) => setFormData({ ...formData, subHead: e.target.value })}
-          className={`w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold cursor-pointer appearance-none ${!formData.subHead ? 'text-slate-300' : 'text-slate-900'}`} required>
-          <option value="">-- Select Sub Head --</option>
-          {subHeads.map((s, i) => <option key={i} value={s}>{s}</option>)}
-         </select>
-        </div>
-        <div className="space-y-1">
-         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Amount (INR) *</label>
-         <div className="relative">
-          <span className="absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-          <input type="number" step="0.01" min="0" value={formData.amount}
-           onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-           placeholder="0.00"
-           className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-8 md:pl-10 pr-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900" required />
-         </div>
-        </div>
-       </div>
-
-       {/* Paid To & Branch */}
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        <div className="space-y-1">
-         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Paid To *</label>
-         <input type="text" value={formData.paidTo}
-          onChange={(e) => setFormData({ ...formData, paidTo: e.target.value })}
-          placeholder="Vendor / Person name"
-          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900" required />
-        </div>
-        <div className="space-y-1">
-         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Branch</label>
-         <input type="text" value={formData.branch}
-          onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-          className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900" />
-        </div>
-       </div>
-
-       {/* Description */}
-       <div className="space-y-1">
-        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Description / Reason *</label>
-        <textarea value={formData.description}
-         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-         placeholder="Brief reason for the expense..."
-         rows="3"
-         className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-900 resize-none" required />
-       </div>
-
-       <div className="space-y-3">
-        <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1 block">Upload Bill / Receipt</label>
-        <div className="relative group">
-         <input
-          type="file"
-          accept="image/*,application/pdf"
-          onChange={async (e) => {
-           const file = e.target.files[0];
-           if (!file) return;
-
-           setIsUploading(true);
-           try {
-            const reader = new FileReader();
-            const base64 = await new Promise((resolve, reject) => {
-             reader.onload = () => resolve(reader.result);
-             reader.onerror = reject;
-             reader.readAsDataURL(file);
+  const commitAll = async () => {
+    if (drafts.length === 0) return;
+    setSubmitting(true);
+    setProcessingStatus('Initializing sync sequence...');
+    try {
+      let currentIdx = 1;
+      for (const draft of drafts) {
+        setProcessingStatus(`Syncing entry ${currentIdx}/${drafts.length}...`);
+        let joinedUrls = '';
+        if (draft.files && draft.files.length > 0) {
+          const uploadedUrls = [];
+          // Determine folder based on type
+          const targetFolderId = draft.type === 'RECEIVE' ? RECEIVE_FOLDER_ID : EXPENSE_FOLDER_ID;
+          
+          for (let fIdx = 0; fIdx < draft.files.length; fIdx++) {
+            const f = draft.files[fIdx];
+            setProcessingStatus(`Uploading file ${fIdx + 1}/${draft.files.length} to ${draft.type === 'RECEIVE' ? 'Receive' : 'Expense'} folder...`);
+            const res = await fetch(APPSCRIPT_URL, { 
+              method: 'POST', 
+              body: JSON.stringify({ 
+                action: 'uploadfile', 
+                file: f.base64, 
+                mimeType: f.type, 
+                fileName: f.name,
+                folderId: targetFolderId // Pass specific folder ID
+              }) 
             });
-
-            const uploadRes = await fetch(APPSCRIPT_URL, {
-             method: 'POST',
-             body: JSON.stringify({
-              action: 'uploadFile',
-              file: (base64).split(',')[1],
-              fileName: file.name,
-              mimeType: file.type || 'application/pdf',
-              folderId: import.meta.env.VITE_BILL_DRIVE || '1IB_JCj4_7wEMWycIAYKH8bngYOj1M7rq'
-             })
-            });
-
-            const uploadResult = await uploadRes.json();
-            if (!uploadResult.success) {
-             throw new Error(uploadResult.error || 'Upload failed');
+            const json = await res.json();
+            if (json.success) {
+              uploadedUrls.push(json.data.url);
+            } else {
+              console.error('File upload failed:', json.error);
+              toast.error(`Failed to upload ${f.name}: ${json.error}`);
             }
+          }
+          joinedUrls = uploadedUrls.join(', ');
+        }
+        
+        setProcessingStatus(`Writing entry ${currentIdx} to ledger...`);
+        const finalPayload = { ...draft.payload, 'Bill / Receipt': joinedUrls };
+        const createRes = await fetch(APPSCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'create', data: finalPayload }) });
+        const createJson = await createRes.json();
+        if (!createJson.success) {
+          console.error('Create action failed:', createJson.error);
+        }
+        currentIdx++;
+      }
+      toast.success('All records synchronized successfully');
+      setDrafts([]); setShowFormModal(false); fetchExpenses();
+    } catch (err) { 
+      console.error('Sync Error:', err);
+      toast.error('Critical sync failure. Check console.'); 
+    } finally { 
+      setSubmitting(false); 
+      setProcessingStatus('');
+    }
+  };
 
-            const driveUrl = uploadResult.data?.url || uploadResult.url;
-            if (driveUrl) {
-             setFormData(prev => ({ ...prev, billUrl: driveUrl }));
-             toast.success('Bill uploaded!');
-            }
-           } catch (err) {
-            toast.error('File upload failed: ' + err.message);
-            e.target.value = '';
-           } finally {
-            setIsUploading(false);
-           }
-          }}
-          className="w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl px-5 py-10 md:py-12 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-400 text-xs md:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] md:text-xs file:font-bold file:bg-slate-900 file:text-white hover:file:bg-indigo-600 cursor-pointer"
-         />
-         {formData.billUrl && (
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 text-emerald-500 animate-in zoom-in duration-300">
-           <div className="p-2 bg-emerald-50 rounded-full border border-emerald-100">
-            <Check size={20} strokeWidth={3} />
-           </div>
-          </div>
-         )}
+  const sortedExpenses = useMemo(() => {
+    return [...expenses]
+      .filter(e => {
+        if (filters.fromDate && e.Date < filters.fromDate) return false;
+        if (filters.toDate && e.Date > filters.toDate) return false;
+        if (filters.flow !== 'ALL' && e.Flow !== filters.flow) return false;
+        if (filters.searchQuery) {
+          const q = filters.searchQuery.toLowerCase();
+          return Object.values(e).some(v => String(v).toLowerCase().includes(q));
+        }
+        return true;
+      })
+      .sort((a, b) => filters.sortOrder === 'asc' ? (a.Date || '').localeCompare(b.Date || '') : (b.Date || '').localeCompare(a.Date || ''));
+  }, [expenses, filters]);
+
+  const stats = useMemo(() => {
+    const totalIn = expenses.filter(e => e.Flow === 'IN' && e.Status === 'APPROVED').reduce((s, e) => s + (parseFloat(e['Amount (INR)']) || 0), 0);
+    const totalOut = expenses.filter(e => e.Flow === 'OUT' && e.Status === 'APPROVED').reduce((s, e) => s + (parseFloat(e['Amount (INR)']) || 0), 0);
+    return { totalIn, totalOut, balance: totalIn - totalOut };
+  }, [expenses]);
+
+  return (
+    <>
+    <div className="max-w-7xl mx-auto space-y-6 p-2">
+      
+      {/* Header */}
+      <div className="flex justify-between items-end pb-4 border-b border-slate-200">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Entry</h1>
+          <p className="text-sm text-slate-500">Document financial transactions</p>
         </div>
-       </div>
+        <div className="flex gap-2">
+          <button onClick={() => { setActiveType('EXPENSE'); setSelectedFiles([]); setShowFormModal(true); }} className="px-4 py-2 bg-rose-600 text-white rounded-md text-sm font-bold hover:bg-rose-700 shadow-sm transition-colors flex items-center gap-2">
+            <TrendingDown size={16} /> New Expense
+          </button>
+          <button onClick={() => { setActiveType('RECEIVE'); setSelectedFiles([]); setShowFormModal(true); }} className="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-bold hover:bg-emerald-700 shadow-sm transition-colors flex items-center gap-2">
+            <TrendingUp size={16} /> New Receive
+          </button>
+        </div>
       </div>
 
-      {/* Modal Footer */}
-      <div className="p-5 md:p-8 border-t border-slate-50 bg-slate-50/30 flex gap-3 md:gap-4">
-       <button
-        type="submit"
-        disabled={submitting || isUploading}
-        className="flex-1 flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 md:py-4 rounded-2xl font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 disabled:shadow-none"
-       >
-        {submitting ? 'Processing...' : isUploading ? 'Uploading...' : 'Submit Expense'}
-       </button>
-       <button
-        type="button"
-        onClick={() => setShowFormModal(false)}
-        className="px-6 md:px-8 py-3.5 md:py-4 bg-white border border-slate-200 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 transition-all active:scale-95"
-       >
-        Abort
-       </button>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Inflow</p>
+          <p className="text-xl font-bold text-emerald-600">+{formatCurrency(stats.totalIn)}</p>
+        </div>
+        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Outflow</p>
+          <p className="text-xl font-bold text-rose-600">-{formatCurrency(stats.totalOut)}</p>
+        </div>
+        <div className="bg-slate-900 p-4 rounded-lg shadow-md border border-slate-800">
+          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Net Cash Position</p>
+          <p className="text-xl font-bold text-white">{formatCurrency(stats.balance)}</p>
+        </div>
       </div>
-     </form>
+
+      {/* Filter Bar */}
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-md px-3 py-1.5 flex-1 min-w-[200px]">
+          <Search size={14} className="text-slate-400" />
+          <input type="text" placeholder="Search entries..." value={filters.searchQuery} onChange={e => setFilters({...filters, searchQuery: e.target.value})} className="text-xs font-medium text-slate-700 bg-transparent outline-none w-full" />
+        </div>
+        <div className="flex items-center gap-2">
+          <select value={filters.flow} onChange={e => setFilters({...filters, flow: e.target.value})} className="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-md px-3 py-1.5 outline-none cursor-pointer">
+            <option value="ALL">All Flows</option>
+            <option value="IN">Inflows</option>
+            <option value="OUT">Outflows</option>
+          </select>
+          <input type="date" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} className="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-md px-3 py-1.5 outline-none" />
+          <input type="date" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} className="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-md px-3 py-1.5 outline-none" />
+          <button onClick={fetchExpenses} className="p-2 text-slate-500 hover:text-indigo-600 transition-colors">
+            <RefreshCcw size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-[10px] tracking-widest">
+              <tr>
+                <th className="px-6 py-3 font-bold">Voucher</th>
+                <th className="px-6 py-3 font-bold">Date / Flow</th>
+                <th className="px-6 py-3 font-bold">Category</th>
+                <th className="px-6 py-3 font-bold">Details</th>
+                <th className="px-6 py-3 font-bold">By (User / Branch)</th>
+                <th className="px-6 py-3 font-bold text-right">Amount / Mode</th>
+                <th className="px-6 py-3 font-bold text-center">Status</th>
+                <th className="px-6 py-3 font-bold text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {fetching ? (
+                 <tr><td colSpan="8" className="py-20 text-center"><RefreshCcw className="animate-spin inline-block text-slate-300"/></td></tr>
+              ) : sortedExpenses.map((e, idx) => {
+                const isIN = e.Flow === 'IN';
+                const fullVoucher = e.SN || 'VCH-0000-000';
+                const parts = fullVoucher.split('-');
+                const vPrefix = parts.slice(0, 2).join('-');
+                const vNumber = parts.slice(2).join('-');
+                return (
+                  <tr key={idx} className={`hover:bg-slate-50/50 transition-all ${isIN ? 'border-l-2 border-emerald-500' : 'border-l-2 border-rose-500'}`}>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-400 leading-none">{vPrefix}</span>
+                        <span className="text-xs font-black text-blue-700">{vNumber}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-700 text-xs">{formatDate(e.Date)}</span>
+                        <span className={`text-[9px] font-black uppercase ${isIN ? 'text-emerald-600' : 'text-rose-600'}`}>{e.Flow}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 text-[11px] uppercase truncate max-w-[120px]">{e['Group Head']}</span>
+                        <span className="text-[10px] text-slate-400">{e['Expense Head']}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col max-w-[150px]">
+                        <span className="font-bold text-slate-900 text-xs truncate">{e['Paid To']}</span>
+                        <span className="text-[10px] text-slate-400 line-clamp-1">{e['Description / Reason']}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                       <div className="flex flex-col">
+                         <div className="flex items-center gap-1.5 text-slate-600 font-bold text-xs"><User size={10}/> {e['user']}</div>
+                         <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium"><Building2 size={10}/> {e['Branch']}</div>
+                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                       <div className="flex flex-col items-end">
+                         <span className={`font-black ${isIN ? 'text-emerald-600' : 'text-rose-600'}`}>
+                           {isIN ? '+' : '-'}{formatCurrency(e['Amount (INR)'])}
+                         </span>
+                         <span className="text-[9px] font-bold text-slate-400 uppercase">{e['Payment mode']}</span>
+                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                       {e['Delete Status'] === 'PENDING_DELETE' ? (
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded border bg-amber-50 border-amber-100 text-amber-600 uppercase">Del Pending</span>
+                      ) : (
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase ${
+                          e.Status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
+                          e.Status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-600' :
+                          'bg-slate-50 border-slate-200 text-slate-400'
+                        }`}>{e.Status || 'PENDING'}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                       <div className="flex justify-center gap-2">
+                        {e['Bill / Receipt'] && (
+                          <div className="flex gap-1">
+                            {e['Bill / Receipt'].split(',').map((url, i) => (
+                              <a key={i} href={url.trim()} target="_blank" rel="noreferrer" className="p-1.5 bg-slate-50 text-blue-600 rounded border border-slate-200 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
+                                <Eye size={12} />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        <button 
+                          onClick={async () => {
+                            if(window.confirm('Delete request?')) {
+                              toast.loading('Processing...', { id: 'del' });
+                              await fetch(APPSCRIPT_URL, { method:'POST', body:JSON.stringify({action:'update', sn:e.SN, deleteStatus:'PENDING_DELETE', deletePlanned:getGoogleSheetTimestamp(), deletedBy:user?.name, isDeleteAction:true})});
+                              toast.success('Requested', { id: 'del' }); fetchExpenses();
+                            }
+                          }}
+                          className="p-1.5 bg-slate-50 text-rose-600 rounded border border-slate-200 hover:bg-rose-600 hover:text-white transition-all"
+                        ><Trash2 size={14} /></button>
+                       </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Form Modal */}
+      {showFormModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+              <h2 className="font-bold text-slate-900">{activeType === 'RECEIVE' ? 'Inflow Registration' : 'Expense Registration'}</h2>
+              <button onClick={()=>setShowFormModal(false)}><X size={20} className="text-slate-400"/></button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[75vh] space-y-6">
+              {activeType === 'EXPENSE' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Date</label>
+                    <input type="date" value={expenseForm.date} onChange={e=>setExpenseForm({...expenseForm, date:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Payment Mode</label>
+                    <select value={expenseForm.paymentMode} onChange={e=>setExpenseForm({...expenseForm, paymentMode:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                      {expenseModes.map(m=><option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Group Head</label>
+                    <select value={expenseForm.groupHead} onChange={e=>setExpenseForm({...expenseForm, groupHead:e.target.value, expenseHead:'', subHead:''})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                      <option value="">Select Group</option>
+                      {groupHeads.map(g=><option key={g} value={g}>{g}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Expense Head</label>
+                    <select value={expenseForm.expenseHead} onChange={e=>setExpenseForm({...expenseForm, expenseHead:e.target.value, subHead:''})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                      <option value="">Select Expense</option>
+                      {expenseHeads.map(eh=><option key={eh} value={eh}>{eh}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Sub Head</label>
+                    <select value={expenseForm.subHead} onChange={e=>setExpenseForm({...expenseForm, subHead:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                      <option value="">Select Sub Head</option>
+                      {subHeads.map(sh=><option key={sh} value={sh}>{sh}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Branch</label>
+                    <select value={expenseForm.branch} onChange={e=>setExpenseForm({...expenseForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                      {branches.map(b=><option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (₹)</label>
+                    <input type="number" value={expenseForm.amount} onChange={e=>setExpenseForm({...expenseForm, amount:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-blue-500 outline-none" placeholder="0.00" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Paid To / Vendor</label>
+                    <input type="text" value={expenseForm.paidTo} onChange={e=>setExpenseForm({...expenseForm, paidTo:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" placeholder="Name" />
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Description</label>
+                    <textarea rows="2" value={expenseForm.description} onChange={e=>setExpenseForm({...expenseForm, description:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" placeholder="Details..." />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Value Date</label>
+                    <input type="date" value={receiveForm.valueDate} onChange={e=>setReceiveForm({...receiveForm, valueDate:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Inflow Type</label>
+                    <select value={receiveForm.transactionType} onChange={e=>setReceiveForm({...receiveForm, transactionType:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                      {receiveModes.map(m=><option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Amount (₹)</label>
+                    <input type="number" value={receiveForm.amount} onChange={e=>setReceiveForm({...receiveForm, amount:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-bold focus:border-blue-500 outline-none" placeholder="0.00" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Branch</label>
+                    <select value={receiveForm.branch} onChange={e=>setReceiveForm({...receiveForm, branch:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none">
+                      {branches.map(b=><option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Received From / Notes</label>
+                    <textarea rows="2" value={receiveForm.descriptionMemo} onChange={e=>setReceiveForm({...receiveForm, descriptionMemo:e.target.value})} className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none" placeholder="Details..." />
+                  </div>
+                </div>
+              )}
+
+              {/* Shared File Upload Section */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Supporting Documentation (Max 5)</label>
+                <div 
+                  onClick={() => selectedFiles.length < 5 && fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition-all cursor-pointer ${selectedFiles.length >= 5 ? 'bg-slate-50 border-slate-200 opacity-50 cursor-not-allowed' : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50/30'}`}
+                >
+                  <Upload size={24} className="text-slate-400 mb-2" />
+                  <span className="text-xs font-bold text-slate-600">Click to upload receipts/proofs</span>
+                  <span className="text-[9px] text-slate-400 mt-1">{selectedFiles.length} of 5 selected</span>
+                  <input type="file" multiple ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,application/pdf" />
+                </div>
+                {selectedFiles.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                    {selectedFiles.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between bg-slate-50 border border-slate-200 p-2 rounded-md group">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <Paperclip size={10} className="text-slate-400 shrink-0" />
+                          <span className="text-[10px] font-medium text-slate-600 truncate">{f.name}</span>
+                        </div>
+                        <button onClick={() => removeFile(i)} className="text-rose-500 hover:bg-rose-50 p-1 rounded"><X size={12}/></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button onClick={addToQueue} className="flex-1 bg-blue-600 text-white py-2.5 rounded font-bold text-sm hover:bg-blue-700 shadow-sm transition-all active:scale-95">Add to Session ({drafts.length})</button>
+              <button onClick={commitAll} disabled={submitting || drafts.length === 0} className="px-8 bg-slate-900 text-white py-2.5 rounded font-bold text-sm hover:bg-slate-800 disabled:opacity-30 transition-all">Submit All</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-   </div>
-  )}
-  {/* Floating Action Button for Mobile */}
-  <button
-   onClick={() => setShowFormModal(true)}
-   className="lg:hidden fixed bottom-6 right-6 p-4 bg-indigo-600 text-white rounded-full shadow-lg shadow-indigo-200 z-50 active:scale-90 transition-transform"
-  >
-   <Plus size={28} strokeWidth={3} />
-  </button>
- </>
- );
+
+    {/* Full Screen Processing Overlay */}
+    {submitting && (
+      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[300] flex flex-col items-center justify-center text-white animate-in fade-in duration-300">
+        <div className="relative mb-8">
+           <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full scale-150 animate-pulse"></div>
+           <Loader2 size={64} className="animate-spin text-blue-400 relative z-10" strokeWidth={1.5} />
+        </div>
+        <h2 className="text-2xl font-bold mb-2 tracking-tight">Syncing with Cloud Ledger</h2>
+        <p className="text-blue-200 font-medium text-sm animate-pulse mb-6">{processingStatus}</p>
+        <div className="w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+           <div className="h-full bg-blue-500 animate-progress-indeterminate"></div>
+        </div>
+        <p className="mt-8 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Transaction Protocol Active</p>
+      </div>
+    )}
+    </>
+  );
 }
+
+const receiveModes = ['Cash Received (+)', 'Bank Transfer (+)', 'Cheque Received (+)', 'Online Received (+)', 'UPI Received (+)'];
+const expenseModes = ['Cash', 'Bank Transfer', 'Cheque', 'Online', 'UPI'];
