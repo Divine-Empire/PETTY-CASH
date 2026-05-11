@@ -21,6 +21,7 @@ export default function AdminDashboard() {
   const [records, setRecords] = useState([]);
   const [fetching, setFetching] = useState(true);
   const [filters, setFilters] = useState({ from: '', to: '', group: '', expense: '', sub: '' });
+  const [showFilters, setShowFilters] = useState(false);
   const fetchDashboardData = async () => {
     try {
       setFetching(true);
@@ -144,92 +145,105 @@ export default function AdminDashboard() {
     <div className="max-w-7xl mx-auto space-y-6 p-2">
       
       {/* Header */}
-      <div className="flex justify-between items-end pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end pb-4 border-b border-slate-200 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500">Financial insights and performance analytics</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Financial insights and performance analytics</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-md text-xs font-bold text-white hover:bg-slate-800 transition-colors shadow-sm">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button onClick={handleExportCSV} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-md text-[10px] sm:text-xs font-bold text-white hover:bg-slate-800 transition-colors shadow-sm">
             <Download size={14} /> Export
           </button>
-          <button onClick={fetchDashboardData} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+          <button onClick={fetchDashboardData} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-white border border-slate-300 rounded-md text-[10px] sm:text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
             <RefreshCcw size={14} className={fetching ? 'animate-spin' : ''} /> Refresh
           </button>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-3 no-print">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-md px-3 py-1.5 min-w-[150px]">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">From</span>
-            <input type="date" value={filters.from} onChange={e => setFilters({...filters, from: e.target.value})} className="text-xs font-bold text-slate-700 bg-transparent border-none outline-none p-0 focus:ring-0" />
+      <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden no-print">
+        <button 
+          onClick={() => setShowFilters(!showFilters)}
+          className="w-full flex items-center justify-between px-4 py-3 sm:hidden bg-white text-[10px] font-bold uppercase text-slate-500 tracking-wider"
+        >
+          <div className="flex items-center gap-2">
+            <Filter size={14} className="text-blue-500" />
+            {showFilters ? 'Hide Filters' : 'Show Data Filters'}
           </div>
-          <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-md px-3 py-1.5 min-w-[150px]">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">To</span>
-            <input type="date" value={filters.to} onChange={e => setFilters({...filters, to: e.target.value})} className="text-xs font-bold text-slate-700 bg-transparent border-none outline-none p-0 focus:ring-0" />
-          </div>
-          <div className="flex gap-2">
-            {[1, 2, 3].map(m => (
-              <button key={m} onClick={() => setPeriod(m)} className="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-[10px] font-bold text-slate-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
-                {m} Month{m > 1 ? 's' : ''}
-              </button>
-            ))}
-          </div>
-          {(filters.from || filters.to || filters.group || filters.expense || filters.sub) && (
-            <button 
-              onClick={() => setFilters({ from: '', to: '', group: '', expense: '', sub: '' })} 
-              className="ml-auto p-2 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
-              title="Reset Filters"
-            >
-              <FilterX size={16} />
-            </button>
-          )}
-        </div>
+          <ChevronRight size={16} className={`transition-transform duration-300 ${showFilters ? 'rotate-90' : ''}`} />
+        </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <select value={filters.group} onChange={e => setFilters({...filters, group: e.target.value, expense: '', sub: ''})} className="bg-white border border-slate-300 rounded-md px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
-            <option value="">All Group Heads</option>
-            {groupHeads.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-          <select value={filters.expense} onChange={e => setFilters({...filters, expense: e.target.value, sub: ''})} className="bg-white border border-slate-300 rounded-md px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
-            <option value="">All Expense Heads</option>
-            {expenseHeads.map(e => <option key={e} value={e}>{e}</option>)}
-          </select>
-          <select value={filters.sub} onChange={e => setFilters({...filters, sub: e.target.value})} className="bg-white border border-slate-300 rounded-md px-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
-            <option value="">All Sub Heads</option>
-            {subHeads.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+        <div className={`${showFilters ? 'block' : 'hidden'} sm:block p-4 space-y-4`}>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[140px] flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2">
+              <span className="text-[9px] font-bold text-slate-400 uppercase">From</span>
+              <input type="date" value={filters.from} onChange={e => setFilters({...filters, from: e.target.value})} className="text-xs font-bold text-slate-700 bg-transparent border-none outline-none p-0 w-full focus:ring-0" />
+            </div>
+            <div className="flex-1 min-w-[140px] flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2">
+              <span className="text-[9px] font-bold text-slate-400 uppercase">To</span>
+              <input type="date" value={filters.to} onChange={e => setFilters({...filters, to: e.target.value})} className="text-xs font-bold text-slate-700 bg-transparent border-none outline-none p-0 w-full focus:ring-0" />
+            </div>
+            <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+              {[1, 2, 3].map(m => (
+                <button key={m} onClick={() => setPeriod(m)} className="flex-1 sm:flex-none px-3 py-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm">
+                  {m}M
+                </button>
+              ))}
+              {(filters.from || filters.to || filters.group || filters.expense || filters.sub) && (
+                <button 
+                  onClick={() => setFilters({ from: '', to: '', group: '', expense: '', sub: '' })} 
+                  className="p-2 text-rose-500 bg-rose-50 rounded-lg hover:bg-rose-100 transition-colors"
+                  title="Reset"
+                >
+                  <FilterX size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <select value={filters.group} onChange={e => setFilters({...filters, group: e.target.value, expense: '', sub: ''})} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/10">
+              <option value="">All Group Heads</option>
+              {groupHeads.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+            <select value={filters.expense} onChange={e => setFilters({...filters, expense: e.target.value, sub: ''})} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/10">
+              <option value="">All Expense Heads</option>
+              {expenseHeads.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+            <select value={filters.sub} onChange={e => setFilters({...filters, sub: e.target.value})} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/10">
+              <option value="">All Sub Heads</option>
+              {subHeads.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp size={48}/></div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Income</p>
-          <p className="text-xl font-bold text-emerald-600">+{formatCurrency(stats.totalIn)}</p>
+          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Income</p>
+          <p className="text-lg font-bold text-emerald-600">+{formatCurrency(stats.totalIn)}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingDown size={48}/></div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Expense</p>
-          <p className="text-xl font-bold text-rose-600">-{formatCurrency(stats.totalOut)}</p>
+          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Expense</p>
+          <p className="text-lg font-bold text-rose-600">-{formatCurrency(stats.totalOut)}</p>
         </div>
-        <div className="bg-slate-900 p-4 rounded-lg shadow-lg relative overflow-hidden group border border-slate-800">
+        <div className="bg-slate-900 p-4 rounded-xl shadow-lg relative overflow-hidden group border border-slate-800 sm:col-span-2 lg:col-span-1">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-white"><Wallet size={48}/></div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Net Balance</p>
-          <p className="text-xl font-bold text-white">{formatCurrency(stats.balance)}</p>
+          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Net Balance</p>
+          <p className="text-lg font-bold text-white">{formatCurrency(stats.balance)}</p>
         </div>
-        <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 shadow-sm relative overflow-hidden group">
+        <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-amber-500"><Clock size={48}/></div>
-          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">Unapproved Exp.</p>
-          <p className="text-xl font-bold text-amber-700">{formatCurrency(stats.totalPending)}</p>
+          <p className="text-[9px] font-bold text-amber-600 uppercase tracking-widest mb-1">Unapproved</p>
+          <p className="text-lg font-bold text-amber-700">{formatCurrency(stats.totalPending)}</p>
         </div>
-        <div className="bg-rose-50 p-4 rounded-lg border border-rose-100 shadow-sm relative overflow-hidden group">
+        <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-rose-500"><ArrowUpDown size={48}/></div>
-          <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">Pending Deletions</p>
-          <p className="text-xl font-bold text-rose-700">{formatCurrency(stats.totalPendingDelete)}</p>
+          <p className="text-[9px] font-bold text-rose-600 uppercase tracking-widest mb-1">Pending Del.</p>
+          <p className="text-lg font-bold text-rose-700">{formatCurrency(stats.totalPendingDelete)}</p>
         </div>
       </div>
 
@@ -286,14 +300,16 @@ export default function AdminDashboard() {
       </div>
 
       {/* Transactions */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+        <div className="px-4 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2">
             <BarChart3 size={16} className="text-slate-400" />
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Recent Activity Ledger</h3>
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Recent Activity</h3>
           </div>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-white text-slate-400 border-b border-slate-100 uppercase text-[9px] tracking-widest font-bold">
               <tr>
@@ -340,6 +356,36 @@ export default function AdminDashboard() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {filteredRecords.slice(0, 5).map((r, idx) => {
+            const isIN = r.Flow === 'IN';
+            return (
+              <div key={idx} className="p-4 space-y-3 active:bg-slate-50 transition-colors">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{formatDate(r.Date)}</p>
+                    <p className="font-bold text-slate-900 text-sm">{r['Group Head'] || 'General'}</p>
+                    <p className="text-xs text-slate-500 line-clamp-1">{r['Description / Reason']}</p>
+                  </div>
+                  <div className="text-right space-y-2">
+                    <p className={`font-black text-sm ${isIN ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {isIN ? '+' : '-'}{formatCurrency(r['Amount (INR)'])}
+                    </p>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${
+                      r.Status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
+                      r.Status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-600' :
+                      'bg-slate-50 border-slate-200 text-slate-400'
+                    }`}>
+                      {r.Status || 'PENDING'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

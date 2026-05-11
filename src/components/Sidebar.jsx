@@ -34,9 +34,11 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { path: '/approval-panel', icon: FileText, label: 'Approval Panel' },
     { path: '/head-master', icon: Database, label: 'Head Master' },
     { path: '/settings', icon: Settings, label: 'Settings' },
+    { path: '/profile', icon: User, label: 'Profile' },
   ];
 
   const isPageAllowed = (label) => {
+    if (label === 'Profile') return true;
     if (!user) return false;
     const role = user.role?.toUpperCase() || '';
 

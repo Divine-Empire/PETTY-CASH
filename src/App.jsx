@@ -10,6 +10,7 @@ import Ledger from './pages/Ledger';
 import ApprovalPanel from './pages/ApprovalPanel';
 import Report from './pages/Report';
 import HeadMaster from './pages/HeadMaster';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import { initializeStorage } from './utils/storageManager';
 
@@ -37,6 +38,7 @@ function App() {
             {/* Admin/Permission Restricted Routes */}
             <Route path="settings" element={<ProtectedRoute requiredPage="Settings" allowedRoles={['ADMIN','SUPER_ADMIN']}><Settings /></ProtectedRoute>} />
             <Route path="head-master" element={<ProtectedRoute requiredPage="Head Master" allowedRoles={['ADMIN','SUPER_ADMIN']}><HeadMaster /></ProtectedRoute>} />
+          <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="ledger" element={<ProtectedRoute allowedRoles={['ADMIN','SUPER_ADMIN']}><Ledger /></ProtectedRoute>} />
             <Route path="approval-panel" element={<ProtectedRoute requiredPage="Approval Panel" allowedRoles={['ADMIN','SUPER_ADMIN']}><ApprovalPanel /></ProtectedRoute>} />
             <Route path="reports" element={<ProtectedRoute requiredPage="Reports" allowedRoles={['ADMIN','SUPER_ADMIN']}><Report /></ProtectedRoute>} />

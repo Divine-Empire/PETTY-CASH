@@ -117,29 +117,31 @@ export default function HeadMaster() {
     <div className="max-w-7xl mx-auto space-y-6 p-2">
       
       {/* Header */}
-      <div className="flex justify-between items-end pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end pb-4 border-b border-slate-200 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Head Master</h1>
-          <p className="text-sm text-slate-500">Full hierarchical control of transaction categories</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Head Master</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Full hierarchical control of transaction categories</p>
         </div>
-        <div className="flex gap-3">
-          {(selectedGroup || selectedExpense) && (
-            <button onClick={clearFilters} className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-bold uppercase flex items-center gap-2 hover:bg-slate-200 shadow-sm border border-slate-200">
-              <FilterX size={12} /> Clear Filter
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <div className="flex gap-2">
+            {(selectedGroup || selectedExpense) && (
+              <button onClick={clearFilters} className="flex-1 sm:flex-none px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold uppercase flex items-center justify-center gap-2 hover:bg-slate-200 shadow-sm border border-slate-200">
+                <FilterX size={12} /> Clear Filter
+              </button>
+            )}
+            <button onClick={() => fetchMasterData()} className="p-2 sm:p-2.5 bg-white border border-slate-300 rounded-lg text-slate-500 hover:bg-slate-50 transition-colors shadow-sm">
+              <RefreshCcw size={18} className={fetching ? 'animate-spin' : ''} />
             </button>
-          )}
-          <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-md px-3 py-1.5 min-w-[200px]">
-            <Search size={14} className="text-slate-400" />
-            <input type="text" placeholder="Search across all levels..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="text-xs font-medium text-slate-700 bg-transparent outline-none w-full" />
           </div>
-          <button onClick={() => fetchMasterData()} className="p-2 bg-white border border-slate-300 rounded-md text-slate-500 hover:bg-slate-50 transition-colors">
-            <RefreshCcw size={18} className={fetching ? 'animate-spin' : ''} />
-          </button>
+          <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-lg px-3 py-2.5 shadow-sm">
+            <Search size={14} className="text-slate-400" />
+            <input type="text" placeholder="Search master data..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="text-xs font-bold text-slate-700 bg-transparent outline-none w-full" />
+          </div>
         </div>
       </div>
 
       {/* Columns Grid - Industrial Flat UI */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pb-20">
         
         {/* Level 1: Groups */}
         <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[500px] shadow-sm overflow-hidden">

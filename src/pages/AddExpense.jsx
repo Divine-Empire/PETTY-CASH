@@ -238,71 +238,72 @@ export default function AddExpense() {
     <div className="max-w-7xl mx-auto space-y-6 p-2">
       
       {/* Header */}
-      <div className="flex justify-between items-end pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end pb-4 border-b border-slate-200 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Entry</h1>
-          <p className="text-sm text-slate-500">Document financial transactions</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Entry</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Document financial transactions</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => { setActiveType('EXPENSE'); setSelectedFiles([]); setShowFormModal(true); }} className="px-4 py-2 bg-rose-600 text-white rounded-md text-sm font-bold hover:bg-rose-700 shadow-sm transition-colors flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button onClick={() => { setActiveType('EXPENSE'); setSelectedFiles([]); setShowFormModal(true); }} className="w-full sm:w-auto px-4 py-2.5 bg-rose-600 text-white rounded-lg text-xs font-bold hover:bg-rose-700 shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
             <TrendingDown size={16} /> New Expense
           </button>
-          <button onClick={() => { setActiveType('RECEIVE'); setSelectedFiles([]); setShowFormModal(true); }} className="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm font-bold hover:bg-emerald-700 shadow-sm transition-colors flex items-center gap-2">
+          <button onClick={() => { setActiveType('RECEIVE'); setSelectedFiles([]); setShowFormModal(true); }} className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
             <TrendingUp size={16} /> New Receive
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Inflow</p>
-          <p className="text-xl font-bold text-emerald-600">+{formatCurrency(stats.totalIn)}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between sm:block">
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest sm:mb-1">Inflow</p>
+          <p className="text-lg font-bold text-emerald-600">+{formatCurrency(stats.totalIn)}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Outflow</p>
-          <p className="text-xl font-bold text-rose-600">-{formatCurrency(stats.totalOut)}</p>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between sm:block">
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest sm:mb-1">Outflow</p>
+          <p className="text-lg font-bold text-rose-600">-{formatCurrency(stats.totalOut)}</p>
         </div>
-        <div className="bg-slate-900 p-4 rounded-lg shadow-md border border-slate-800">
-          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Net Cash Position</p>
-          <p className="text-xl font-bold text-white">{formatCurrency(stats.balance)}</p>
+        <div className="bg-slate-900 p-4 rounded-xl shadow-md border border-slate-800 flex items-center justify-between sm:block">
+          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest sm:mb-1">Net Position</p>
+          <p className="text-lg font-bold text-white">{formatCurrency(stats.balance)}</p>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 bg-white border border-slate-300 rounded-md px-3 py-1.5 flex-1 min-w-[200px]">
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-2 sm:p-3 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 flex-1 shadow-sm">
           <Search size={14} className="text-slate-400" />
-          <input type="text" placeholder="Search entries..." value={filters.searchQuery} onChange={e => setFilters({...filters, searchQuery: e.target.value})} className="text-xs font-medium text-slate-700 bg-transparent outline-none w-full" />
+          <input type="text" placeholder="Search entries..." value={filters.searchQuery} onChange={e => setFilters({...filters, searchQuery: e.target.value})} className="text-xs font-bold text-slate-700 bg-transparent outline-none w-full" />
         </div>
-        <div className="flex items-center gap-2">
-          <select value={filters.flow} onChange={e => setFilters({...filters, flow: e.target.value})} className="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-md px-3 py-1.5 outline-none cursor-pointer">
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={filters.flow} onChange={e => setFilters({...filters, flow: e.target.value})} className="flex-1 sm:flex-none text-[10px] font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none shadow-sm">
             <option value="ALL">All Flows</option>
             <option value="IN">Inflows</option>
             <option value="OUT">Outflows</option>
           </select>
-          <input type="date" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} className="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-md px-3 py-1.5 outline-none" />
-          <input type="date" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} className="text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-md px-3 py-1.5 outline-none" />
-          <button onClick={fetchExpenses} className="p-2 text-slate-500 hover:text-blue-600 transition-colors">
+          <input type="date" value={filters.fromDate} onChange={e => setFilters({...filters, fromDate: e.target.value})} className="flex-1 sm:flex-none text-[10px] font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-2 outline-none shadow-sm" />
+          <input type="date" value={filters.toDate} onChange={e => setFilters({...filters, toDate: e.target.value})} className="flex-1 sm:flex-none text-[10px] font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-2 py-2 outline-none shadow-sm" />
+          <button onClick={fetchExpenses} className="p-2 text-slate-500 hover:text-blue-600 transition-colors bg-white rounded-lg border border-slate-200 shadow-sm">
             <RefreshCcw size={16} />
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+      {/* Table / List */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-20">
+        {/* Desktop View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-[10px] tracking-widest">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-[10px] tracking-widest font-black">
               <tr>
-                <th className="px-6 py-3 font-bold">Voucher</th>
-                <th className="px-6 py-3 font-bold">Date / Flow</th>
-                <th className="px-6 py-3 font-bold">Category</th>
-                <th className="px-6 py-3 font-bold">Details</th>
-                <th className="px-6 py-3 font-bold">By (User / Branch)</th>
-                <th className="px-6 py-3 font-bold text-right">Amount / Mode</th>
-                <th className="px-6 py-3 font-bold text-center">Status</th>
-                <th className="px-6 py-3 font-bold text-center">Action</th>
+                <th className="px-6 py-3">Voucher</th>
+                <th className="px-6 py-3">Date / Flow</th>
+                <th className="px-6 py-3">Category</th>
+                <th className="px-6 py-3">Details</th>
+                <th className="px-6 py-3">By</th>
+                <th className="px-6 py-3 text-right">Amount</th>
+                <th className="px-6 py-3 text-center">Status</th>
+                <th className="px-6 py-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -310,24 +311,15 @@ export default function AddExpense() {
                  <tr><td colSpan="8" className="py-20 text-center"><RefreshCcw className="animate-spin inline-block text-slate-300"/></td></tr>
               ) : sortedExpenses.map((e, idx) => {
                 const isIN = e.Flow === 'IN';
-                const fullVoucher = e.SN || 'VCH-0000-000';
-                const parts = fullVoucher.split('-');
-                const vPrefix = parts.slice(0, 2).join('-');
-                const vNumber = parts.slice(2).join('-');
                 return (
                   <tr key={idx} className={`hover:bg-slate-50/50 transition-all ${isIN ? 'border-l-2 border-emerald-500' : 'border-l-2 border-rose-500'}`}>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 leading-none">{vPrefix}</span>
-                        <span className="text-xs font-black text-blue-700">{vNumber}</span>
+                        <span className="text-[10px] font-bold text-slate-400 leading-none">VCH</span>
+                        <span className="text-xs font-black text-blue-700">#{e.SN?.split('-').pop()}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-700 text-xs">{formatDate(e.Date)}</span>
-                        <span className={`text-[9px] font-black uppercase ${isIN ? 'text-emerald-600' : 'text-rose-600'}`}>{e.Flow}</span>
-                      </div>
-                    </td>
+                    <td className="px-6 py-4 text-[11px] font-bold text-slate-600">{formatDate(e.Date)}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 text-[11px] uppercase truncate max-w-[120px]">{e['Group Head']}</span>
@@ -340,39 +332,25 @@ export default function AddExpense() {
                         <span className="text-[10px] text-slate-400 line-clamp-1">{e['Description / Reason']}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                       <div className="flex flex-col">
-                         <div className="flex items-center gap-1.5 text-slate-600 font-bold text-xs"><User size={10}/> {e['user']}</div>
-                         <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium"><Building2 size={10}/> {e['Branch']}</div>
-                       </div>
-                    </td>
+                    <td className="px-6 py-4 text-[10px] font-bold text-slate-500">{e['user']}</td>
                     <td className="px-6 py-4 text-right">
-                       <div className="flex flex-col items-end">
-                         <span className={`font-black ${isIN ? 'text-emerald-600' : 'text-rose-600'}`}>
-                           {isIN ? '+' : '-'}{formatCurrency(e['Amount (INR)'])}
-                         </span>
-                         <span className="text-[9px] font-bold text-slate-400 uppercase">{e['Payment mode']}</span>
-                       </div>
+                       <span className={`font-black ${isIN ? 'text-emerald-600' : 'text-rose-600'}`}>
+                         {isIN ? '+' : '-'}{formatCurrency(e['Amount (INR)'])}
+                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                       {e['Delete Status'] === 'PENDING_DELETE' ? (
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded border bg-amber-50 border-amber-100 text-amber-600 uppercase">Del Pending</span>
-                      ) : (
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded border uppercase ${
-                          e.Status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
-                          e.Status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-600' :
-                          'bg-slate-50 border-slate-200 text-slate-400'
-                        }`}>{e.Status || 'PENDING'}</span>
-                      )}
+                       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase ${
+                         e.Status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
+                         e.Status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-600' :
+                         'bg-slate-50 border-slate-200 text-slate-400'
+                       }`}>{e.Status || 'PENDING'}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
                        <div className="flex justify-center gap-2">
                         {e['Bill / Receipt'] && (
                           <div className="flex gap-1">
                             {e['Bill / Receipt'].split(',').map((url, i) => (
-                              <a key={i} href={url.trim()} target="_blank" rel="noreferrer" className="p-1.5 bg-slate-50 text-blue-600 rounded border border-slate-200 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
-                                <Eye size={12} />
-                              </a>
+                              <a key={i} href={url.trim()} target="_blank" rel="noreferrer" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-all"><Eye size={14} /></a>
                             ))}
                           </div>
                         )}
@@ -384,7 +362,7 @@ export default function AddExpense() {
                               toast.success('Requested', { id: 'del' }); fetchExpenses();
                             }
                           }}
-                          className="p-1.5 bg-slate-50 text-rose-600 rounded border border-slate-200 hover:bg-rose-600 hover:text-white transition-all"
+                          className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-all"
                         ><Trash2 size={14} /></button>
                        </div>
                     </td>
@@ -394,18 +372,72 @@ export default function AddExpense() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile View Card List */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {fetching ? (
+            <div className="py-10 text-center"><RefreshCcw className="animate-spin inline-block text-slate-300"/></div>
+          ) : sortedExpenses.map((e, idx) => {
+            const isIN = e.Flow === 'IN';
+            return (
+              <div key={idx} className={`p-4 space-y-3 relative active:bg-slate-50 ${isIN ? 'border-l-4 border-emerald-500' : 'border-l-4 border-rose-500'}`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{formatDate(e.Date)} • {e['user']}</p>
+                    <p className="font-black text-slate-900 text-sm uppercase">{e['Group Head']}</p>
+                    <p className="text-xs font-semibold text-slate-500 truncate max-w-[200px]">{e['Description / Reason'] || e['Paid To']}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-black text-base ${isIN ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {isIN ? '+' : '-'}{formatCurrency(e['Amount (INR)'])}
+                    </p>
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[8px] font-black uppercase border ${
+                      e.Status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' :
+                      e.Status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-600' :
+                      'bg-slate-50 border-slate-200 text-slate-400'
+                    }`}>
+                      {e.Status || 'PENDING'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">#{e.SN?.split('-').pop()}</span>
+                  <div className="flex gap-3">
+                    {e['Bill / Receipt'] && (
+                      <a href={e['Bill / Receipt'].split(',')[0]} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[10px] font-bold text-blue-600 uppercase">
+                        <Paperclip size={12} /> View Bill
+                      </a>
+                    )}
+                    <button 
+                      onClick={async () => {
+                        if(window.confirm('Delete request?')) {
+                          toast.loading('Processing...', { id: 'del' });
+                          await fetch(APPSCRIPT_URL, { method:'POST', body:JSON.stringify({action:'update', sn:e.SN, deleteStatus:'PENDING_DELETE', deletePlanned:getGoogleSheetTimestamp(), deletedBy:user?.id, isDeleteAction:true})});
+                          toast.success('Requested', { id: 'del' }); fetchExpenses();
+                        }
+                      }}
+                      className="flex items-center gap-1 text-[10px] font-bold text-rose-600 uppercase"
+                    >
+                      <Trash2 size={12} /> Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Form Modal */}
       {showFormModal && createPortal(
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-md flex items-center justify-center z-[999] p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl flex flex-col overflow-hidden border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-              <h2 className="font-bold text-slate-900">{activeType === 'RECEIVE' ? 'Inflow Registration' : 'Expense Registration'}</h2>
-              <button onClick={()=>setShowFormModal(false)}><X size={20} className="text-slate-400"/></button>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm sm:backdrop-blur-md flex items-end sm:items-center justify-center z-[999] sm:p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-2xl flex flex-col overflow-hidden border border-slate-200 h-[90vh] sm:h-auto">
+            <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+              <h2 className="font-black text-slate-900 uppercase tracking-tight text-sm sm:text-base">{activeType === 'RECEIVE' ? 'Inflow Registration' : 'Expense Registration'}</h2>
+              <button onClick={()=>setShowFormModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} className="text-slate-500"/></button>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[75vh] space-y-6">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
               {activeType === 'EXPENSE' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1">
@@ -536,8 +568,10 @@ export default function AddExpense() {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button disabled={submitting} onClick={handleDirectSubmit} className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-700 shadow-sm transition-all active:scale-95 disabled:opacity-50">Submit Transaction</button>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3 shrink-0">
+              <button disabled={submitting} onClick={handleDirectSubmit} className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50">
+                {submitting ? 'Processing...' : 'Submit Transaction'}
+              </button>
             </div>
           </div>
         </div>,

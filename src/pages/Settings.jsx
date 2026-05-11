@@ -10,7 +10,7 @@ import { useAuthStore } from '../store/authStore';
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
 
 const availablePages = [
-  'Dashboard', 'Entry', 'Approval Panel', 'Ledger', 'Reports', 'Head Master', 'Settings'
+  'Dashboard', 'Entry', 'Approval Panel', 'Head Master', 'Settings'
 ];
 
 export default function Settings() {
@@ -141,13 +141,13 @@ export default function Settings() {
     <div className="max-w-7xl mx-auto space-y-6 p-2">
       
       {/* Header */}
-      <div className="flex justify-between items-end pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end pb-4 border-b border-slate-200 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-          <p className="text-sm text-slate-500">Manage user access and system permissions</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Settings</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Manage user access and system permissions</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={fetchUsers} className="p-2 bg-white border border-slate-300 rounded-md text-slate-500 hover:bg-slate-50 transition-colors shadow-sm">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button onClick={fetchUsers} className="flex-1 sm:flex-none p-2.5 bg-white border border-slate-300 rounded-lg text-slate-500 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center">
             <RefreshCw size={18} className={fetching ? 'animate-spin' : ''} />
           </button>
           <button onClick={() => { 
@@ -160,44 +160,46 @@ export default function Settings() {
               pageAccess:['Dashboard', 'Entry']
             }); 
             setIsModalOpen(true); 
-          }} className="px-4 py-2 bg-slate-900 text-white rounded-md text-sm font-bold hover:bg-slate-800 shadow-sm flex items-center gap-2">
+          }} className="flex-[3] sm:flex-none px-4 py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95">
             <UserPlus size={16} /> Add User
           </button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Users</p>
-          <p className="text-xl font-bold text-slate-900">{users.length}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between sm:block">
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest sm:mb-1">Total Users</p>
+          <p className="text-lg font-bold text-slate-900">{users.length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Administrators</p>
-          <p className="text-xl font-bold text-blue-600">{users.filter(u=>u.role==='ADMIN').length}</p>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between sm:block">
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest sm:mb-1">Admins</p>
+          <p className="text-lg font-bold text-blue-600">{users.filter(u=>u.role==='ADMIN').length}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Active Branches</p>
-          <p className="text-xl font-bold text-emerald-600">{branches.length}</p>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between sm:block">
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest sm:mb-1">Branches</p>
+          <p className="text-lg font-bold text-emerald-600">{branches.length}</p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-100 flex items-center gap-3">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mb-20">
+        <div className="p-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50">
           <Search size={14} className="text-slate-400" />
-          <input type="text" placeholder="Search by name or username..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="text-xs font-medium text-slate-700 bg-transparent outline-none w-full" />
+          <input type="text" placeholder="Search by name or username..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="text-xs font-bold text-slate-700 bg-transparent outline-none w-full" />
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 uppercase text-[10px] tracking-widest">
+            <thead className="bg-white text-slate-500 border-b border-slate-200 uppercase text-[10px] tracking-widest font-black">
               <tr>
-                <th className="px-6 py-3 font-bold">User</th>
-                <th className="px-6 py-3 font-bold">Username</th>
-                <th className="px-6 py-3 font-bold">Role</th>
-                <th className="px-6 py-3 font-bold">Branch / Dept</th>
-                <th className="px-6 py-3 font-bold">Access</th>
-                <th className="px-6 py-3 font-bold text-center">Action</th>
+                <th className="px-6 py-3">User</th>
+                <th className="px-6 py-3">Username</th>
+                <th className="px-6 py-3">Role</th>
+                <th className="px-6 py-3">Branch / Dept</th>
+                <th className="px-6 py-3">Access</th>
+                <th className="px-6 py-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -205,13 +207,13 @@ export default function Settings() {
                 <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-xs uppercase">{u.name.charAt(0)}</div>
+                      <div className="w-8 h-8 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-xs uppercase shadow-sm">{u.name.charAt(0)}</div>
                       <span className="font-bold text-slate-900">{u.name}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-xs font-medium text-blue-600">@{u.id}</td>
+                  <td className="px-6 py-4 text-xs font-bold text-blue-600">@{u.id}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${u.role==='ADMIN'?'bg-blue-50 border-blue-100 text-blue-600':'bg-slate-50 border-slate-200 text-slate-500'}`}>{u.role}</span>
+                    <span className={`px-2 py-0.5 rounded border text-[9px] font-black uppercase ${u.role==='ADMIN' || u.role === 'SUPER_ADMIN' ? 'bg-blue-50 border-blue-100 text-blue-600':'bg-slate-50 border-slate-200 text-slate-400'}`}>{u.role}</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
@@ -222,10 +224,10 @@ export default function Settings() {
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
                       {u.pageAccess.slice(0,3).map(p=><span key={p} className="text-[9px] px-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded text-slate-400">{p}</span>)}
-                      {u.pageAccess.length > 3 && <span className="text-[9px] text-slate-300">+{u.pageAccess.length - 3} more</span>}
+                      {u.pageAccess.length > 3 && <span className="text-[9px] text-slate-300">+{u.pageAccess.length - 3}</span>}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-center">
                     <div className="flex justify-center gap-2">
                       {(authUser?.role === 'SUPER_ADMIN' || (authUser?.role === 'ADMIN' && u.role === 'USER')) ? (
                         <>
@@ -233,7 +235,7 @@ export default function Settings() {
                           <button onClick={()=> handleDeleteUser(u.id)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"><Trash2 size={14}/></button>
                         </>
                       ) : (
-                        <span className="p-1.5 text-slate-300 cursor-not-allowed" title="Permission Denied"><ShieldCheck size={14}/></span>
+                        <span className="p-1.5 text-slate-300 cursor-not-allowed"><ShieldCheck size={14}/></span>
                       )}
                     </div>
                   </td>
@@ -242,17 +244,55 @@ export default function Settings() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Card View List */}
+        <div className="sm:hidden divide-y divide-slate-100">
+          {filteredUsers.map((u, idx) => (
+            <div key={idx} className="p-4 space-y-3 active:bg-slate-50 transition-colors">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm uppercase shadow-lg shadow-blue-500/20">{u.name.charAt(0)}</div>
+                  <div>
+                    <p className="font-black text-slate-900 text-sm">{u.name}</p>
+                    <p className="text-xs font-bold text-blue-600">@{u.id}</p>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full border text-[8px] font-black uppercase ${u.role==='ADMIN' || u.role === 'SUPER_ADMIN' ? 'bg-blue-50 border-blue-100 text-blue-600':'bg-slate-50 border-slate-200 text-slate-400'}`}>{u.role}</span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                <div className="flex flex-col">
+                  <span className="font-bold text-slate-700 text-[10px] uppercase tracking-tighter">{u.branch}</span>
+                  <span className="text-[9px] text-slate-400">{u.department}</span>
+                </div>
+                <div className="flex gap-4">
+                  {(authUser?.role === 'SUPER_ADMIN' || (authUser?.role === 'ADMIN' && u.role === 'USER')) ? (
+                    <>
+                      <button onClick={()=> { setEditingUserId(u.id); setNewUser(u); setIsModalOpen(true); }} className="flex items-center gap-1 text-[10px] font-bold text-blue-600 uppercase">
+                        <Edit2 size={12} /> Edit
+                      </button>
+                      <button onClick={()=> handleDeleteUser(u.id)} className="flex items-center gap-1 text-[10px] font-bold text-rose-600 uppercase">
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-300 uppercase flex items-center gap-1"><ShieldCheck size={12}/> Secured</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-xl flex flex-col overflow-hidden border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-              <h2 className="font-bold text-slate-900">{editingUserId ? 'Edit User' : 'Register New User'}</h2>
-              <button onClick={()=> setIsModalOpen(false)}><X size={20} className="text-slate-400"/></button>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm sm:backdrop-blur-md flex items-end sm:items-center justify-center z-[200] sm:p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-xl flex flex-col overflow-hidden border border-slate-200 h-[90vh] sm:h-auto">
+            <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+              <h2 className="font-black text-slate-900 uppercase tracking-tight text-sm sm:text-base">{editingUserId ? 'Update User Account' : 'Register New Member'}</h2>
+              <button onClick={()=> setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={20} className="text-slate-500"/></button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[70vh] space-y-4">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Full Name</label>
@@ -337,9 +377,9 @@ export default function Settings() {
                 </div>
               </div>
             </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button onClick={handleSaveUser} disabled={submitting} className="flex-1 bg-slate-900 text-white py-2 rounded font-bold text-sm hover:bg-slate-800 disabled:opacity-50">Save Changes</button>
-              <button onClick={()=> setIsModalOpen(false)} className="px-6 bg-white border border-slate-300 text-slate-500 py-2 rounded font-bold text-sm hover:bg-slate-50">Cancel</button>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3 shrink-0">
+              <button onClick={handleSaveUser} disabled={submitting} className="flex-1 bg-slate-900 text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 shadow-lg shadow-slate-900/10 transition-all active:scale-95 disabled:opacity-50">Save Changes</button>
+              <button onClick={()=> setIsModalOpen(false)} className="px-6 bg-white border border-slate-300 text-slate-500 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-50">Cancel</button>
             </div>
           </div>
         </div>

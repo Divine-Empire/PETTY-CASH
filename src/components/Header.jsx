@@ -1,7 +1,10 @@
-import React from 'react';
-import { Bell, Search, User, Menu, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, Search, User, Menu, Settings as SettingsIcon } from 'lucide-react';
 
 const Header = ({ onMenuClick, user }) => {
+  const navigate = useNavigate();
+  const isAdmin = user?.role?.toUpperCase().includes('ADMIN');
+
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
       <div className="flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8">
@@ -19,9 +22,15 @@ const Header = ({ onMenuClick, user }) => {
         {/* Right Section: Actions & Profile */}
         <div className="flex items-center gap-2 sm:gap-4">
 
-          <button className="p-2 text-blue-600 hover:bg-slate-100 rounded-lg transition-all">
-            <Settings size={20} />
-          </button>
+          {isAdmin && (
+            <button 
+              onClick={() => navigate('/settings')}
+              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-all"
+              title="System Settings"
+            >
+              <SettingsIcon size={20} />
+            </button>
+          )}
 
           <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
