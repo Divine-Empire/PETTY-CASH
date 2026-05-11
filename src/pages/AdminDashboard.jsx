@@ -32,32 +32,33 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchDashboardData(); }, []);
 
-  const filteredRecords = useMemo(() => {
+  const scopedRecords = useMemo(() => {
     const role = user?.role?.toUpperCase();
     const userId = user?.id || '';
 
-    return records
-      .filter(r => r['Delete Status'] === 'ACTIVE')
-      .filter(r => {
-        // --- Role-based data scoping ---
-        if (role === 'SUPER_ADMIN') return true;
-        if (role === 'ADMIN') {
-          return r['user'] === userId || r['Reported by'] === userId;
-        }
-        return r['user'] === userId;
-      })
-      .filter(r => {
-        const date = r.Date ? new Date(r.Date).toISOString().split('T')[0] : '';
-        const matchDateFrom = !filters.from || date >= filters.from;
-        const matchDateTo = !filters.to || date <= filters.to;
-        
-        const matchGroup = !filters.group || r['Group Head'] === filters.group;
-        const matchExpense = !filters.expense || r['Expense Head'] === filters.expense;
-        const matchSub = !filters.sub || r['Sub Head'] === filters.sub;
+    return records.filter(r => {
+      // --- Role-based data scoping ---
+      if (role === 'SUPER_ADMIN') return true;
+      if (role === 'ADMIN') {
+        return r['user'] === userId || r['Reported by'] === userId;
+      }
+      return r['user'] === userId;
+    });
+  }, [records, user]);
 
-        return matchDateFrom && matchDateTo && matchGroup && matchExpense && matchSub;
-      });
-  }, [records, filters, user]);
+  const filteredRecords = useMemo(() => {
+    return scopedRecords.filter(r => {
+      const date = r.Date ? new Date(r.Date).toISOString().split('T')[0] : '';
+      const matchDateFrom = !filters.from || date >= filters.from;
+      const matchDateTo = !filters.to || date <= filters.to;
+      
+      const matchGroup = !filters.group || r['Group Head'] === filters.group;
+      const matchExpense = !filters.expense || r['Expense Head'] === filters.expense;
+      const matchSub = !filters.sub || r['Sub Head'] === filters.sub;
+
+      return matchDateFrom && matchDateTo && matchGroup && matchExpense && matchSub;
+    });
+  }, [scopedRecords, filters]);
 
   const groupHeads = useMemo(() => [...new Set(records.map(r => r['Group Head']).filter(Boolean))].sort(), [records]);
   const expenseHeads = useMemo(() => [...new Set(records.map(r => r['Expense Head']).filter(Boolean))].sort(), [records]);
@@ -72,15 +73,22 @@ export default function AdminDashboard() {
   };
 
   const stats = useMemo(() => {
-    const totalIn = filteredRecords.filter(r => r.Flow === 'IN' && r.Status === 'APPROVED').reduce((s, r) => s + (parseFloat(r['Amount (INR)']) || 0), 0);
-    const totalOut = filteredRecords.filter(r => r.Flow === 'OUT' && r.Status === 'APPROVED').reduce((s, r) => s + (parseFloat(r['Amount (INR)']) || 0), 0);
-    return { totalIn, totalOut, balance: totalIn - totalOut };
+    // Only approved/active for income/expense/balance
+    const activeApproved = filteredRecords.filter(r => r['Delete Status'] === 'ACTIVE' && r.Status === 'APPROVED');
+    const totalIn = activeApproved.filter(r => r.Flow === 'IN').reduce((s, r) => s + (parseFloat(r['Amount (INR)']) || 0), 0);
+    const totalOut = activeApproved.filter(r => r.Flow === 'OUT').reduce((s, r) => s + (parseFloat(r['Amount (INR)']) || 0), 0);
+    
+    // New stats
+    const totalPending = filteredRecords.filter(r => r.Status === 'PENDING' && r['Delete Status'] === 'ACTIVE').reduce((s, r) => s + (parseFloat(r['Amount (INR)']) || 0), 0);
+    const totalPendingDelete = filteredRecords.filter(r => r['Delete Status'] === 'PENDING_DELETE').reduce((s, r) => s + (parseFloat(r['Amount (INR)']) || 0), 0);
+
+    return { totalIn, totalOut, balance: totalIn - totalOut, totalPending, totalPendingDelete };
   }, [filteredRecords]);
 
   // Chart Data Preparation
   const trendData = useMemo(() => {
     const dailyMap = {};
-    filteredRecords.filter(r => r.Status === 'APPROVED').forEach(r => {
+    filteredRecords.filter(r => r.Status === 'APPROVED' && r['Delete Status'] === 'ACTIVE').forEach(r => {
       const d = r.Date || 'N/A';
       if (!dailyMap[d]) dailyMap[d] = { date: d, income: 0, expense: 0 };
       if (r.Flow === 'IN') dailyMap[d].income += parseFloat(r['Amount (INR)']) || 0;
@@ -197,21 +205,31 @@ export default function AdminDashboard() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp size={64}/></div>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp size={48}/></div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Income</p>
-          <p className="text-2xl font-bold text-emerald-600">+{formatCurrency(stats.totalIn)}</p>
+          <p className="text-xl font-bold text-emerald-600">+{formatCurrency(stats.totalIn)}</p>
         </div>
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingDown size={64}/></div>
+        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingDown size={48}/></div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Expense</p>
-          <p className="text-2xl font-bold text-rose-600">-{formatCurrency(stats.totalOut)}</p>
+          <p className="text-xl font-bold text-rose-600">-{formatCurrency(stats.totalOut)}</p>
         </div>
-        <div className="bg-slate-900 p-5 rounded-lg shadow-lg relative overflow-hidden group border border-slate-800">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-white"><Wallet size={64}/></div>
+        <div className="bg-slate-900 p-4 rounded-lg shadow-lg relative overflow-hidden group border border-slate-800">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity text-white"><Wallet size={48}/></div>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Net Balance</p>
-          <p className="text-2xl font-bold text-white">{formatCurrency(stats.balance)}</p>
+          <p className="text-xl font-bold text-white">{formatCurrency(stats.balance)}</p>
+        </div>
+        <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-amber-500"><Clock size={48}/></div>
+          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">Unapproved Exp.</p>
+          <p className="text-xl font-bold text-amber-700">{formatCurrency(stats.totalPending)}</p>
+        </div>
+        <div className="bg-rose-50 p-4 rounded-lg border border-rose-100 shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-rose-500"><ArrowUpDown size={48}/></div>
+          <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">Pending Deletions</p>
+          <p className="text-xl font-bold text-rose-700">{formatCurrency(stats.totalPendingDelete)}</p>
         </div>
       </div>
 

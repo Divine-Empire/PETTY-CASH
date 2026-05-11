@@ -140,7 +140,6 @@ export default function AddExpense() {
           'Description / Reason': expenseForm.description,
           'user': user?.id || 'admin',
           'Reported by': user?.reportedBy || '',
-          'Planned': getGoogleSheetTimestamp(),
           'Status': 'PENDING',
           'Delete Status': 'ACTIVE',
           'Flow': 'OUT'
@@ -155,8 +154,6 @@ export default function AddExpense() {
           'Branch': receiveForm.branch,
           'Description / Reason': receiveForm.receivedFrom,
           'user': user?.id || 'admin',
-          'Planned': getGoogleSheetTimestamp(),
-          'Approval Timestamp': getGoogleSheetTimestamp(),
           'Status': 'APPROVED',
           'Approval / Reject - Remark': 'Auto-approved',
           'Delete Status': 'ACTIVE',
