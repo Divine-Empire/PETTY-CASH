@@ -11,8 +11,8 @@ const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
 
 
 // Drive Folder IDs
-const EXPENSE_FOLDER_ID = '1bBqruNp7BSsGL217YrJexi49K9gUAYK2';
-const RECEIVE_FOLDER_ID = '1U7iXD3-_v3dKn-gyv5M3eG3HxV01mTmR';
+const EXPENSE_FOLDER_ID = import.meta.env.VITE_BILL_DRIVE || '14ps67rSpF0vsv30KNsjEPkYe8W3ZZjBZ';
+const RECEIVE_FOLDER_ID = import.meta.env.VITE_BILL_DRIVE || '14ps67rSpF0vsv30KNsjEPkYe8W3ZZjBZ';
 
 export default function AddExpense() {
   const { user } = useAuthStore();
@@ -123,67 +123,94 @@ export default function AddExpense() {
     }
 
     setSubmitting(true);
-    setProcessingStatus('Connecting to Cloud Ledger...');
+    setProcessingStatus('Uploading documents...');
     
     try {
-      let payload = {};
-      if (activeType === 'EXPENSE') {
-        payload = {
-          'Date': expenseForm.date,
-          'Payment mode': expenseForm.paymentMode,
-          'Group Head': expenseForm.groupHead,
-          'Expense Head': expenseForm.expenseHead,
-          'Sub Head': expenseForm.subHead || '-',
-          'Amount (INR)': parseFloat(expenseForm.amount),
-          'Paid To': expenseForm.paidTo,
-          'Branch': expenseForm.branch,
-          'Description / Reason': expenseForm.description,
-          'user': user?.id || 'admin',
-          'Reported by': user?.reportedBy || '',
-          'Status': 'PENDING',
-          'Delete Status': 'ACTIVE',
-          'Flow': 'OUT'
-        };
-      } else {
-        payload = {
-          'Date': receiveForm.valueDate,
-          'Payment mode': receiveForm.transactionType,
-          'Group Head': 'INCOME', 'Expense Head': 'RECEIVE', 'Sub Head': '-',
-          'Amount (INR)': parseFloat(receiveForm.amount),
-          'Paid To': receiveForm.receivedFrom || user?.id || 'admin',
-          'Branch': receiveForm.branch,
-          'Description / Reason': receiveForm.receivedFrom,
-          'user': user?.id || 'admin',
-          'Status': 'APPROVED',
-          'Approval / Reject - Remark': 'Auto-approved',
-          'Delete Status': 'ACTIVE',
-          'Flow': 'IN',
-          'Reported by': user?.reportedBy || ''
-        };
-      }
-
+      // 1. Upload files first to get URLs
       let joinedUrls = '';
       if (selectedFiles.length > 0) {
         const uploadedUrls = [];
         const targetFolderId = activeType === 'RECEIVE' ? RECEIVE_FOLDER_ID : EXPENSE_FOLDER_ID;
+        
         for (let i = 0; i < selectedFiles.length; i++) {
           const f = selectedFiles[i];
           setProcessingStatus(`Uploading proof ${i + 1}/${selectedFiles.length}...`);
-          const res = await fetch(APPSCRIPT_URL, { 
+          
+          const uploadRes = await fetch(APPSCRIPT_URL, { 
             method: 'POST', 
-            body: JSON.stringify({ action: 'uploadfile', file: f.base64, mimeType: f.type, fileName: f.name, folderId: targetFolderId }) 
+            body: JSON.stringify({ 
+              action: 'uploadfile', 
+              file: f.base64, 
+              mimeType: f.type, 
+              fileName: f.name, 
+              folderId: targetFolderId 
+            }) 
           });
-          const json = await res.json();
-          if (json.success) uploadedUrls.push(json.data.url);
+          
+          const uploadJson = await uploadRes.json();
+          if (uploadJson.success && uploadJson.data?.url) {
+            uploadedUrls.push(uploadJson.data.url);
+          } else {
+            console.error('Upload failed for file:', f.name, uploadJson.error);
+            throw new Error(`Failed to upload ${f.name}: ${uploadJson.error || 'Unknown error'}`);
+          }
         }
         joinedUrls = uploadedUrls.join(', ');
       }
 
+      // 2. Construct payload
+      // We send multiple variations of the 'Bill / Receipt' key to ensure the backend dynamic mapping finds it
       setProcessingStatus('Committing transaction...');
-      const finalPayload = { ...payload, 'Bill / Receipt': joinedUrls };
-      const res = await fetch(APPSCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'create', data: finalPayload }) });
-      const json = await res.json();
+      const baseData = {
+        'Bill / Receipt': joinedUrls,
+        'Bill/Receipt': joinedUrls,
+        'Bill Receipt': joinedUrls,
+        'billreceipt': joinedUrls,
+        'user': user?.id || 'admin',
+        'Reported by': user?.reportedBy || user?.id || 'admin',
+        'Status': activeType === 'RECEIVE' ? 'APPROVED' : 'PENDING',
+        'Delete Status': 'ACTIVE'
+      };
 
+      let finalPayload = {};
+      
+      if (activeType === 'EXPENSE') {
+        finalPayload = {
+          ...baseData,
+          'Date': expenseForm.date,
+          'Flow': 'OUT',
+          'Group Head': expenseForm.groupHead,
+          'Expense Head': expenseForm.expenseHead,
+          'Sub Head': expenseForm.subHead || '-',
+          'Payment mode': expenseForm.paymentMode,
+          'Amount (INR)': parseFloat(expenseForm.amount),
+          'Paid To': expenseForm.paidTo,
+          'Branch': expenseForm.branch,
+          'Description / Reason': expenseForm.description
+        };
+      } else {
+        finalPayload = {
+          ...baseData,
+          'Date': receiveForm.valueDate,
+          'Flow': 'IN',
+          'Group Head': 'INCOME',
+          'Expense Head': 'RECEIVE',
+          'Sub Head': '-',
+          'Payment mode': receiveForm.transactionType,
+          'Amount (INR)': parseFloat(receiveForm.amount),
+          'Paid To': receiveForm.receivedFrom || user?.id || 'admin',
+          'Branch': receiveForm.branch,
+          'Description / Reason': receiveForm.receivedFrom,
+          'Approval / Reject - Remark': 'Auto-approved'
+        };
+      }
+
+      const res = await fetch(APPSCRIPT_URL, { 
+        method: 'POST', 
+        body: JSON.stringify({ action: 'create', data: finalPayload }) 
+      });
+      
+      const json = await res.json();
       if (json.success) {
         toast.success('Transaction Submitted Successfully');
         setShowFormModal(false);
@@ -195,6 +222,7 @@ export default function AddExpense() {
         throw new Error(json.error || 'Server error');
       }
     } catch (err) {
+      console.error('Submission Error:', err);
       toast.error('Submission failed: ' + err.message);
     } finally {
       setSubmitting(false);
