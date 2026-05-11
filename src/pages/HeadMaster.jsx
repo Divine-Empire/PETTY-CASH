@@ -54,14 +54,12 @@ export default function HeadMaster() {
   }, [masterData, searchTerm]);
 
   const vendors = useMemo(() => {
-    return [...new Set(masterData.map(d => d['Vendore']).filter(Boolean))]
-      .filter(v => v.toLowerCase().includes(searchTerm.toLowerCase())).sort();
-  }, [masterData, searchTerm]);
+    return [...new Set(masterData.map(d => d['Vendore']).filter(Boolean))].sort();
+  }, [masterData]);
 
   const branchesMaster = useMemo(() => {
-    return [...new Set(masterData.map(d => d['Branch']).filter(Boolean))]
-      .filter(b => b.toLowerCase().includes(searchTerm.toLowerCase())).sort();
-  }, [masterData, searchTerm]);
+    return [...new Set(masterData.map(d => d['Branch']).filter(Boolean))].sort();
+  }, [masterData]);
 
   const callApi = async (action, data) => {
     setSaving(true);
@@ -81,7 +79,7 @@ export default function HeadMaster() {
         const payload = activeAction.level === 'group' ? { 'Group Head': val, 'Expense Head': '', 'Sub Head': '', 'Vendor': '', 'Branch': '' } :
                         activeAction.level === 'expense' ? { 'Group Head': selectedGroup || '', 'Expense Head': val, 'Sub Head': '', 'Vendore': '', 'Branch': '' } :
                         activeAction.level === 'sub' ? { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': val, 'Vendore': '', 'Branch': '' } :
-                        activeAction.level === 'vendor' ? { 'Group Head': selectedGroup || '', 'Expense Head': selectedExpense || '', 'Sub Head': '', 'Vendore': val, 'Branch': '' } :
+                        activeAction.level === 'vendor' ? { 'Group Head': '', 'Expense Head': '', 'Sub Head': '', 'Vendore': val, 'Branch': '' } :
                         { 'Group Head': '', 'Expense Head': '', 'Sub Head': '', 'Vendor': '', 'Branch': val };
         await callApi('createMaster', payload);
       } else {
@@ -89,13 +87,13 @@ export default function HeadMaster() {
         const oldV = level === 'group' ? { 'Group Head': oldValue } : 
                     level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': oldValue } : 
                     level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': oldValue } :
-                    level === 'vendor' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendore': oldValue } :
+                    level === 'vendor' ? { 'Vendore': oldValue } :
                     { 'Branch': oldValue };
         
         const newV = level === 'group' ? { 'Group Head': val } : 
                     level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': val } : 
                     level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': val } :
-                    level === 'vendor' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendore': val } :
+                    level === 'vendor' ? { 'Vendore': val } :
                     { 'Branch': val };
         await callApi('updateMaster', { level, oldValue: oldV, newValue: newV });
       }
@@ -108,7 +106,7 @@ export default function HeadMaster() {
     const payload = level === 'group' ? { 'Group Head': value } : 
                    level === 'expense' ? { 'Group Head': selectedGroup, 'Expense Head': value } : 
                    level === 'sub' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Sub Head': value } :
-                   level === 'vendor' ? { 'Group Head': selectedGroup, 'Expense Head': selectedExpense, 'Vendore': value } :
+                   level === 'vendor' ? { 'Vendore': value } :
                    { 'Branch': value };
     try { await callApi('deleteMaster', payload); toast.success('Deleted'); fetchMasterData(true); } catch {}
   };
@@ -182,11 +180,42 @@ export default function HeadMaster() {
                   : 'bg-white border-transparent text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <span className="text-xs font-semibold truncate flex-1">{g}</span>
-                <div className={`flex gap-0.5 transition-all ${selectedGroup === g ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  <button onClick={(e) => {e.stopPropagation(); setActiveAction({type:'edit', level:'group', oldValue:g}); setInputValue(g);}} className="p-1 hover:bg-blue-100 rounded text-blue-600"><Edit2 size={12}/></button>
-                  <button onClick={(e) => {e.stopPropagation(); handleDelete('group', g);}} className="p-1 hover:bg-rose-100 rounded text-rose-600"><Trash2 size={12}/></button>
-                </div>
+                {activeAction?.level === 'group' && activeAction.type === 'edit' && activeAction.oldValue === g ? (
+                  <div className="flex gap-1 w-full p-1 bg-white rounded shadow-inner">
+                    <input autoFocus disabled={saving} value={inputValue} onChange={e=>setInputValue(e.target.value)} className="flex-1 text-xs px-1 outline-none font-bold text-blue-600" />
+                    <button onClick={(e)=>{e.stopPropagation(); handleCommit();}} className="p-1 bg-emerald-500 text-white rounded"><Check size={12}/></button>
+                    <button onClick={(e)=>{e.stopPropagation(); setActiveAction(null);}} className="p-1 text-slate-400"><X size={12}/></button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xs font-semibold truncate flex-1">{g}</span>
+                    <div className={`flex gap-1 transition-all ${selectedGroup === g ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation(); 
+                          setActiveAction({type:'edit', level:'group', oldValue:g}); 
+                          setInputValue(g);
+                        }} 
+                        className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-colors z-20"
+                        title="Edit Group"
+                      >
+                        <Edit2 size={14}/>
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation(); 
+                          handleDelete('group', g);
+                        }} 
+                        className="p-1.5 hover:bg-rose-100 rounded-md text-rose-600 transition-colors z-20"
+                        title="Delete Group"
+                      >
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -225,11 +254,42 @@ export default function HeadMaster() {
                   : 'bg-white border-transparent text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <span className="text-xs font-semibold truncate flex-1">{e}</span>
-                <div className={`flex gap-0.5 transition-all ${selectedExpense === e ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  <button onClick={(ev) => {ev.stopPropagation(); setActiveAction({type:'edit', level:'expense', oldValue:e}); setInputValue(e);}} className="p-1 hover:bg-blue-100 rounded text-blue-600"><Edit2 size={12}/></button>
-                  <button onClick={(ev) => {ev.stopPropagation(); handleDelete('expense', e);}} className="p-1 hover:bg-rose-100 rounded text-rose-600"><Trash2 size={12}/></button>
-                </div>
+                {activeAction?.level === 'expense' && activeAction.type === 'edit' && activeAction.oldValue === e ? (
+                  <div className="flex gap-1 w-full p-1 bg-white rounded shadow-inner">
+                    <input autoFocus disabled={saving} value={inputValue} onChange={ev=>setInputValue(ev.target.value)} className="flex-1 text-xs px-1 outline-none font-bold text-blue-600" />
+                    <button onClick={(ev)=>{ev.stopPropagation(); handleCommit();}} className="p-1 bg-emerald-500 text-white rounded"><Check size={12}/></button>
+                    <button onClick={(ev)=>{ev.stopPropagation(); setActiveAction(null);}} className="p-1 text-slate-400"><X size={12}/></button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xs font-semibold truncate flex-1">{e}</span>
+                    <div className={`flex gap-1 transition-all ${selectedExpense === e ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                      <button 
+                        onClick={(ev) => {
+                          ev.preventDefault();
+                          ev.stopPropagation(); 
+                          setActiveAction({type:'edit', level:'expense', oldValue:e}); 
+                          setInputValue(e);
+                        }} 
+                        className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600 transition-colors z-20"
+                        title="Edit Expense"
+                      >
+                        <Edit2 size={14}/>
+                      </button>
+                      <button 
+                        onClick={(ev) => {
+                          ev.preventDefault();
+                          ev.stopPropagation(); 
+                          handleDelete('expense', e);
+                        }} 
+                        className="p-1.5 hover:bg-rose-100 rounded-md text-rose-600 transition-colors z-20"
+                        title="Delete Expense"
+                      >
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -263,11 +323,40 @@ export default function HeadMaster() {
                 key={s} 
                 className={`group flex items-center justify-between px-3 py-2 rounded transition-all border bg-white border-transparent text-slate-600 hover:bg-slate-50`}
               >
-                <span className="text-xs font-semibold truncate flex-1">{s}</span>
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
-                  <button onClick={() => {setActiveAction({type:'edit', level:'sub', oldValue:s}); setInputValue(s);}} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"><Edit2 size={12}/></button>
-                  <button onClick={() => handleDelete('sub', s)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-rose-600"><Trash2 size={12}/></button>
-                </div>
+                {activeAction?.level === 'sub' && activeAction.type === 'edit' && activeAction.oldValue === s ? (
+                  <div className="flex gap-1 w-full p-1 bg-white rounded shadow-inner">
+                    <input autoFocus disabled={saving} value={inputValue} onChange={ev=>setInputValue(ev.target.value)} className="flex-1 text-xs px-1 outline-none font-bold text-blue-600" />
+                    <button onClick={(ev)=>{ev.stopPropagation(); handleCommit();}} className="p-1 bg-emerald-500 text-white rounded"><Check size={12}/></button>
+                    <button onClick={(ev)=>{ev.stopPropagation(); setActiveAction(null);}} className="p-1 text-slate-400"><X size={12}/></button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xs font-semibold truncate flex-1">{s}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button 
+                        onClick={(ev) => {
+                          ev.stopPropagation(); 
+                          setActiveAction({type:'edit', level:'sub', oldValue:s}); 
+                          setInputValue(s);
+                        }} 
+                        className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Edit Sub Head"
+                      >
+                        <Edit2 size={14}/>
+                      </button>
+                      <button 
+                        onClick={(ev) => {
+                          ev.stopPropagation(); 
+                          handleDelete('sub', s);
+                        }} 
+                        className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-rose-600 transition-colors"
+                        title="Delete Sub Head"
+                      >
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -281,7 +370,6 @@ export default function HeadMaster() {
               <span className="text-[10px] font-bold uppercase text-slate-600 tracking-wider">Vendore</span>
             </div>
             <button 
-              disabled={!selectedExpense}
               onClick={() => { setActiveAction({type:'add', level:'vendor'}); setInputValue(''); }} 
               className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30"
             >
@@ -298,11 +386,40 @@ export default function HeadMaster() {
             )}
             {vendors.map(v => (
               <div key={v} className="group flex items-center justify-between px-3 py-2 rounded transition-all border bg-white border-transparent text-slate-600 hover:bg-slate-50">
-                <span className="text-xs font-semibold truncate flex-1">{v}</span>
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
-                  <button onClick={() => {setActiveAction({type:'edit', level:'vendor', oldValue:v}); setInputValue(v);}} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"><Edit2 size={12}/></button>
-                  <button onClick={() => handleDelete('vendor', v)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-rose-600"><Trash2 size={12}/></button>
-                </div>
+                {activeAction?.level === 'vendor' && activeAction.type === 'edit' && activeAction.oldValue === v ? (
+                  <div className="flex gap-1 w-full p-1 bg-white rounded shadow-inner">
+                    <input autoFocus disabled={saving} value={inputValue} onChange={ev=>setInputValue(ev.target.value)} className="flex-1 text-xs px-1 outline-none font-bold text-blue-600" />
+                    <button onClick={(ev)=>{ev.stopPropagation(); handleCommit();}} className="p-1 bg-emerald-500 text-white rounded"><Check size={12}/></button>
+                    <button onClick={(ev)=>{ev.stopPropagation(); setActiveAction(null);}} className="p-1 text-slate-400"><X size={12}/></button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xs font-semibold truncate flex-1">{v}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button 
+                        onClick={(ev) => {
+                          ev.stopPropagation(); 
+                          setActiveAction({type:'edit', level:'vendor', oldValue:v}); 
+                          setInputValue(v);
+                        }} 
+                        className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Edit Vendor"
+                      >
+                        <Edit2 size={14}/>
+                      </button>
+                      <button 
+                        onClick={(ev) => {
+                          ev.stopPropagation(); 
+                          handleDelete('vendor', v);
+                        }} 
+                        className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-rose-600 transition-colors"
+                        title="Delete Vendor"
+                      >
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -332,11 +449,40 @@ export default function HeadMaster() {
             )}
             {branchesMaster.map(b => (
               <div key={b} className="group flex items-center justify-between px-3 py-2 rounded transition-all border bg-white border-transparent text-slate-600 hover:bg-slate-50">
-                <span className="text-xs font-semibold truncate flex-1">{b}</span>
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
-                  <button onClick={() => {setActiveAction({type:'edit', level:'branch', oldValue:b}); setInputValue(b);}} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-blue-600"><Edit2 size={12}/></button>
-                  <button onClick={() => handleDelete('branch', b)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-rose-600"><Trash2 size={12}/></button>
-                </div>
+                {activeAction?.level === 'branch' && activeAction.type === 'edit' && activeAction.oldValue === b ? (
+                  <div className="flex gap-1 w-full p-1 bg-white rounded shadow-inner">
+                    <input autoFocus disabled={saving} value={inputValue} onChange={ev=>setInputValue(ev.target.value)} className="flex-1 text-xs px-1 outline-none font-bold text-blue-600" />
+                    <button onClick={(ev)=>{ev.stopPropagation(); handleCommit();}} className="p-1 bg-emerald-500 text-white rounded"><Check size={12}/></button>
+                    <button onClick={(ev)=>{ev.stopPropagation(); setActiveAction(null);}} className="p-1 text-slate-400"><X size={12}/></button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-xs font-semibold truncate flex-1">{b}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button 
+                        onClick={(ev) => {
+                          ev.stopPropagation(); 
+                          setActiveAction({type:'edit', level:'branch', oldValue:b}); 
+                          setInputValue(b);
+                        }} 
+                        className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-blue-600 transition-colors"
+                        title="Edit Branch"
+                      >
+                        <Edit2 size={14}/>
+                      </button>
+                      <button 
+                        onClick={(ev) => {
+                          ev.stopPropagation(); 
+                          handleDelete('branch', b);
+                        }} 
+                        className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-rose-600 transition-colors"
+                        title="Delete Branch"
+                      >
+                        <Trash2 size={14}/>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>

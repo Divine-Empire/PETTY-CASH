@@ -10,8 +10,8 @@ const ProtectedRoute = ({ children, allowedRoles, requiredPage }) => {
   }
 
   // Super Admin bypass
-  const role = user.role?.toUpperCase();
-  if (role === 'SUPER_ADMIN') return <>{children}</>;
+  const role = user.role?.toUpperCase() || '';
+  if (role.includes('SUPER') && role.includes('ADMIN')) return <>{children}</>;
 
   // Role check
   if (allowedRoles && !allowedRoles.includes(user.role?.toUpperCase())) {

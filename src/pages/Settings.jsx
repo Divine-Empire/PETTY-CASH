@@ -10,7 +10,7 @@ import { useAuthStore } from '../store/authStore';
 const APPSCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
 
 const availablePages = [
-  'Dashboard', 'Entry', 'Approval Panel', 'Head Master', 'Settings'
+  'Dashboard', 'Entry', 'Approval Panel', 'Ledger', 'Reports', 'Head Master', 'Settings'
 ];
 
 export default function Settings() {
@@ -97,6 +97,11 @@ export default function Settings() {
       return toast.error('Administrators must report to a Manager (Super Admin)');
     }
 
+    // ADMIN creates a USER: Auto-set reportedBy to themselves
+    if (authUser?.role?.toUpperCase() === 'ADMIN' && newUser.role === 'USER') {
+      newUser.reportedBy = authUser.id;
+    }
+
     setSubmitting(true);
     const toastId = toast.loading('Saving...');
     try {
@@ -151,7 +156,7 @@ export default function Settings() {
               name:'', id:'', password:'', role:'USER', 
               branch: branches[0] || 'Head Office', 
               department:'Accounts', 
-              reportedBy:'', 
+              reportedBy: authUser?.role?.toUpperCase() === 'ADMIN' ? authUser.id : '', 
               pageAccess:['Dashboard', 'Entry']
             }); 
             setIsModalOpen(true); 

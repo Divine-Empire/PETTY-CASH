@@ -37,26 +37,14 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   ];
 
   const isPageAllowed = (label) => {
-    const role = user?.role?.toUpperCase();
-    
-    // Explicitly block standard users from administrative modules
-    if (role === 'USER') {
-      const adminPages = ['Approval Panel', 'Head Master', 'Settings'];
-      if (adminPages.includes(label)) return false;
-    }
+    if (!user) return false;
+    const role = user.role?.toUpperCase() || '';
 
     // SUPER_ADMIN has unrestricted access
-    if (role === 'SUPER_ADMIN') return true;
+    if (role.includes('SUPER') && role.includes('ADMIN')) return true;
 
     // ADMIN and USER must respect their pageAccess settings
-    if (user?.pageAccess && user.pageAccess.length > 0) {
-      return user.pageAccess.includes(label);
-    }
-
-    // Fallback: Default access for Dashboard and Entry if no permissions set
-    if (label === 'Dashboard' || label === 'Entry') return true;
-    
-    return false;
+    return user.pageAccess?.includes(label);
   };
 
   const menuItems = adminMenuItems.filter(item => isPageAllowed(item.label));

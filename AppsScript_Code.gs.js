@@ -622,7 +622,7 @@ function handleMasterRequests(payload) {
 
 /**
  * Manages User Settings CRUD for the 'setting' sheet.
- * Columns: A:user, B:user name, C:password, D:role, E:branch, F:department, G:Page access
+ * Columns: A:user, B:user name, C:password, D:role, E:branch, F:department, G:Page access, H:Reported by
  */
 function handleSettingRequests(payload) {
   var sheetName = 'setting';
@@ -661,6 +661,7 @@ function handleSettingRequests(payload) {
       var branch = (d['branch'] || 'Head Office').trim();
       var dept = (d['department'] || 'Accounts').trim();
       var pageAccess = (d['Page access'] || '').trim();
+      var reportedBy = (d['Reported by'] || '').trim();
 
       if (!userFull || !userName || !password) {
         return { success: false, error: 'All fields are required' };
@@ -674,7 +675,7 @@ function handleSettingRequests(payload) {
         return { success: false, error: 'Username already exists' };
       }
 
-      sheet.appendRow([userFull, userName, password, role, branch, dept, pageAccess]);
+      sheet.appendRow([userFull, userName, password, role, branch, dept, pageAccess, reportedBy]);
       return { success: true, message: 'User created successfully' };
     }
 
@@ -690,7 +691,7 @@ function handleSettingRequests(payload) {
       var updated = false;
       for (var i = 1; i < values.length; i++) {
         if (String(values[i][1]).trim() === oldUserName) {
-          sheet.getRange(i + 1, 1, 1, 7).setValues([[
+          sheet.getRange(i + 1, 1, 1, 8).setValues([[
             newValue['user'] || values[i][0],
             newValue['user name'] || values[i][1],
             newValue['password'] || values[i][2],
